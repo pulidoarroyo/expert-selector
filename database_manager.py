@@ -1,48 +1,19 @@
 import sqlite3
+import json
 
 class DatabaseManager:
-    def __init__(self, db_name='expert_selector.db'):
-        self.conn = sqlite3.connect(db_name)
+    def __init__(self, db_path='expert_selector.db'):
+        """Initialize database connection and create tables"""
+        self.conn = sqlite3.connect(db_path)
         self.cursor = self.conn.cursor()
-        self.create_tables()
+        self.crear_tablas()
 
-    def create_tables(self):
-        # Tabla de idiomas predeterminados
-        self.cursor.execute('''
-        CREATE TABLE IF NOT EXISTS idiomas (
-            id INTEGER PRIMARY KEY,
-            nombre TEXT UNIQUE
-        )
-        ''')
-
-        # Tabla de habilidades predeterminadas
-        self.cursor.execute('''
-        CREATE TABLE IF NOT EXISTS habilidades (
-            id INTEGER PRIMARY KEY,
-            nombre TEXT UNIQUE
-        )
-        ''')
-
-        # Tabla de países de Latinoamérica
-        self.cursor.execute('''
-        CREATE TABLE IF NOT EXISTS paises (
-            id INTEGER PRIMARY KEY,
-            nombre TEXT UNIQUE
-        )
-        ''')
-
-        # Tabla de salarios predeterminados
-        self.cursor.execute('''
-        CREATE TABLE IF NOT EXISTS salarios (
-            id INTEGER PRIMARY KEY,
-            rango TEXT UNIQUE
-        )
-        ''')
-
+    def crear_tablas(self):
+        """Create necessary tables if they don't exist"""
         # Tabla de candidatos
         self.cursor.execute('''
         CREATE TABLE IF NOT EXISTS candidatos (
-            id INTEGER PRIMARY KEY,
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
             nombre TEXT,
             apellido TEXT,
             idiomas TEXT,
@@ -55,7 +26,7 @@ class DatabaseManager:
         # Tabla de proyectos
         self.cursor.execute('''
         CREATE TABLE IF NOT EXISTS proyectos (
-            id INTEGER PRIMARY KEY,
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
             nombre_empresa TEXT,
             nombre_proyecto TEXT,
             descripcion TEXT,
@@ -69,64 +40,127 @@ class DatabaseManager:
         # Tabla de coincidencias
         self.cursor.execute('''
         CREATE TABLE IF NOT EXISTS coincidencias (
-            id INTEGER PRIMARY KEY,
-            nombre_candidato TEXT,
-            nombre_proyecto TEXT,
-            porcentaje_coincidencia REAL
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            proyecto_id INTEGER,
+            candidato_id INTEGER,
+            porcentaje_coincidencia REAL,
+            detalles TEXT,
+            FOREIGN KEY(proyecto_id) REFERENCES proyectos(id),
+            FOREIGN KEY(candidato_id) REFERENCES candidatos(id)
         )
         ''')
-
-        # Insertar datos predeterminados
-        self.insertar_datos_predeterminados()
         self.conn.commit()
 
-    def insertar_datos_predeterminados(self):
-        # Idiomas
-        idiomas = ['Español', 'Inglés', 'Portugués', 'Francés']
-        for idioma in idiomas:
-            self.cursor.execute('INSERT OR IGNORE INTO idiomas (nombre) VALUES (?)', (idioma,))
-
-        # Habilidades
-        habilidades = [
-            'Python', 'JavaScript', 'React', 'SQL', 'Gestión de Proyectos', 
-            'Diseño UX/UI', 'Marketing Digital', 'Machine Learning'
-        ]
-        for habilidad in habilidades:
-            self.cursor.execute('INSERT OR IGNORE INTO habilidades (nombre) VALUES (?)', (habilidad,))
-
-        # Países de Latinoamérica
-        paises = [
-            'Argentina', 'Bolivia', 'Brasil', 'Chile', 'Colombia', 
-            'Costa Rica', 'Cuba', 'Ecuador', 'El Salvador', 'Guatemala', 
-            'Honduras', 'México', 'Nicaragua', 'Panamá', 'Paraguay', 
-            'Perú', 'República Dominicana', 'Uruguay', 'Venezuela'
-        ]
-        for pais in paises:
-            self.cursor.execute('INSERT OR IGNORE INTO paises (nombre) VALUES (?)', (pais,))
-
-        # Rangos salariales
-        salarios = [
-            '1000-2000', '2000-3000', '3000-4000', 
-            '4000-5000', '5000-6000', '6000+'
-        ]
-        for salario in salarios:
-            self.cursor.execute('INSERT OR IGNORE INTO salarios (rango) VALUES (?)', (salario,))
-
     def obtener_idiomas(self):
-        self.cursor.execute('SELECT nombre FROM idiomas')
-        return [idioma[0] for idioma in self.cursor.fetchall()]
+        """Devuelve una lista de idiomas predefinidos"""
+        return ['Español', 'Inglés', 'Portugués', 'Francés', 'Alemán']
 
     def obtener_habilidades(self):
-        self.cursor.execute('SELECT nombre FROM habilidades')
-        return [habilidad[0] for habilidad in self.cursor.fetchall()]
-
-    def obtener_paises(self):
-        self.cursor.execute('SELECT nombre FROM paises')
-        return [pais[0] for pais in self.cursor.fetchall()]
+        """Devuelve una lista de habilidades predefinidas"""
+        return ['Python', 'JavaScript', 'React', 'SQL', 'Java', 'C++', 'Data Science', 'Machine Learning']
 
     def obtener_salarios(self):
-        self.cursor.execute('SELECT rango FROM salarios')
-        return [salario[0] for salario in self.cursor.fetchall()]
+        """Devuelve rangos de salarios predefinidos"""
+        return ['2000-3000', '3000-4000', '4000-5000', '5000-6000', '6000+']
 
-    def close(self):
+    def obtener_paises(self):
+        """Devuelve lista de países de Latinoamérica"""
+        return ['Argentina', 'Brasil', 'Chile', 'Colombia', 'México', 'Perú', 'Uruguay','Venezuela','Estados Unidos']
+
+    def guardar_candidato(self, candidato):
+        """Guarda un nuevo candidato en la base de datos"""
+        # Convertir listas de idiomas y habilidades a cadenas
+        idiomas = ', '.join(candidato.get('idiomas', []))
+        habilidades = ', '.join(candidato.get('habilidades', []))
+
+        self.cursor.execute('''
+        INSERT INTO candidatos 
+        (nombre, apellido, idiomas, habilidades, preferencia_salarial, ubicacion) 
+        VALUES (?, ?, ?, ?, ?, ?)
+        ''', (
+            candidato['nombre'], 
+            candidato['apellido'], 
+            idiomas, 
+            habilidades, 
+            candidato['salario'], 
+            candidato['ubicacion']
+        ))
+        self.conn.commit()
+        return self.cursor.lastrowid
+
+    def listar_candidatos(self):
+   
+        self.cursor.execute('''
+            SELECT 
+                nombre, 
+                apellido, 
+                idiomas, 
+                habilidades, 
+                preferencia_salarial, 
+                ubicacion
+            FROM candidatos
+        ''')
+        
+        # Obtener los nombres de las columnas
+        columnas = [column[0] for column in self.cursor.description]
+        
+        # Convertir resultados a lista de diccionarios
+        candidatos = []
+        for fila in self.cursor.fetchall():
+            candidato = dict(zip(columnas, fila))
+            candidatos.append(candidato)
+        
+        return candidatos
+    
+    def listar_proyectos(self):
+    
+    
+        self.cursor.execute('''
+            SELECT 
+                nombre_empresa, 
+                nombre_proyecto, 
+                descripcion, 
+                ubicacion, 
+                idiomas_requeridos, 
+                habilidades_requeridas, 
+                salario_minimo 
+            FROM proyectos
+        ''')
+        
+        # Obtener los nombres de las columnas
+        columnas = [column[0] for column in self.cursor.description]
+        
+        # Convertir resultados a lista de diccionarios
+        proyectos = []
+        for fila in self.cursor.fetchall():
+            proyecto = dict(zip(columnas, fila))
+            proyectos.append(proyecto)
+        
+        return proyectos
+    
+    def guardar_proyecto(self, proyecto):
+        """Guarda un nuevo proyecto en la base de datos"""
+        # Convertir listas de idiomas y habilidades a cadenas
+        idiomas = ', '.join(proyecto.get('idiomas_requeridos', []))
+        habilidades = ', '.join(proyecto.get('habilidades_requeridas', []))
+
+        self.cursor.execute('''
+        INSERT INTO proyectos 
+        (nombre_empresa, nombre_proyecto, descripcion, ubicacion, 
+        idiomas_requeridos, habilidades_requeridas, salario_minimo) 
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+        ''', (
+            proyecto['nombre_empresa'], 
+            proyecto['nombre_proyecto'], 
+            proyecto['descripcion'], 
+            proyecto['ubicacion'], 
+            idiomas, 
+            habilidades, 
+            proyecto['salario_minimo']
+        ))
+        self.conn.commit()
+        return self.cursor.lastrowid
+
+    def __del__(self):
+        """Cierra la conexión a la base de datos"""
         self.conn.close()
