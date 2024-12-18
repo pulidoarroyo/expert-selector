@@ -3,13 +3,13 @@ import json
 
 class DatabaseManager:
     def __init__(self, db_path='expert_selector.db'):
-        """Initialize database connection and create tables"""
+        """Inicializa conexión con la db y crea tablas"""
         self.conn = sqlite3.connect(db_path)
         self.cursor = self.conn.cursor()
         self.crear_tablas()
 
     def crear_tablas(self):
-        """Create necessary tables if they don't exist"""
+        """Crea tablas si no existen"""
         # Tabla de candidatos
         self.cursor.execute('''
         CREATE TABLE IF NOT EXISTS candidatos (

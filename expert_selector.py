@@ -13,7 +13,7 @@ from PyQt5.QtGui import QFont
 from database_manager import DatabaseManager
 from matching_algorithm import MatchingAlgorithm
 
-#ExpertSelector es la clase principal, dentro de de ella se encuentran los metodos de la creación de la ventana, las vistas y la carga de datos desde la bd
+# Metodos de la creación de la ventana, las vistas y la carga de datos desde la bd
 class ExpertSelector(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -437,12 +437,3 @@ class ExpertSelector(QMainWindow):
 
         dialog.setLayout(layout)
         dialog.exec_()
-        
-def main():
-    app = QApplication(sys.argv)
-    ventana = ExpertSelector()
-    ventana.show()
-    sys.exit(app.exec_())
-
-if __name__ == "__main__":
-    main()
