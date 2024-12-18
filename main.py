@@ -1,4 +1,5 @@
 import sys
+import json
 from PyQt5.QtWidgets import QApplication
 from expert_selector import ExpertSelector
 

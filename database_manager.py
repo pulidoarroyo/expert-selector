@@ -69,49 +69,134 @@ class DatabaseManager:
 
     def guardar_candidato(self, candidato):
         """Guarda un nuevo candidato en la base de datos"""
-        # Convertir listas de idiomas y habilidades a cadenas
-        idiomas = ', '.join(candidato.get('idiomas', []))
-        habilidades = ', '.join(candidato.get('habilidades', []))
+        try:
+            # Convertir listas a JSON strings
+            idiomas_json = json.dumps(candidato.get('idiomas', []))
+            habilidades_json = json.dumps(candidato.get('habilidades', []))
 
-        self.cursor.execute('''
-        INSERT INTO candidatos 
-        (nombre, apellido, idiomas, habilidades, preferencia_salarial, ubicacion) 
-        VALUES (?, ?, ?, ?, ?, ?)
-        ''', (
-            candidato['nombre'], 
-            candidato['apellido'], 
-            idiomas, 
-            habilidades, 
-            candidato['salario'], 
-            candidato['ubicacion']
-        ))
-        self.conn.commit()
-        return self.cursor.lastrowid
+            self.cursor.execute('''
+            INSERT INTO candidatos 
+            (nombre, apellido, idiomas, habilidades, preferencia_salarial, ubicacion) 
+            VALUES (?, ?, ?, ?, ?, ?)
+            ''', (
+                candidato['nombre'], 
+                candidato['apellido'], 
+                idiomas_json,
+                habilidades_json,
+                candidato['salario'], 
+               candidato['ubicacion']
+            ))
+            self.conn.commit()
+            return self.cursor.lastrowid
+        except Exception as e:
+            self.conn.rollback()
+            raise Exception(f"Error al guardar candidato: {str(e)}")
+
+    def obtener_candidato_por_id(self, id_candidato):
+        try:
+            self.cursor.execute('''
+                SELECT id, nombre, apellido, idiomas, habilidades, 
+                       preferencia_salarial, ubicacion 
+                FROM candidatos 
+                WHERE id = ?
+            ''', (id_candidato,))
+        
+            candidato = self.cursor.fetchone()
+        
+            if candidato:
+            # Convertir strings JSON a listas
+                try:
+                    idiomas = json.loads(candidato[3]) if candidato[3] else []
+                    habilidades = json.loads(candidato[4]) if candidato[4] else []
+                except json.JSONDecodeError:
+                    # Si no es JSON válido, asumimos que es string separado por comas
+                    idiomas = [x.strip() for x in candidato[3].split(',')] if candidato[3] else []
+                    habilidades = [x.strip() for x in candidato[4].split(',')] if candidato[4] else []
+            
+                return {
+                    'id': candidato[0],
+                    'nombre': candidato[1],
+                    'apellido': candidato[2],
+                    'idiomas': idiomas,
+                    'habilidades': habilidades,
+                    'preferencia_salarial': candidato[5],
+                    'ubicacion': candidato[6]
+                }
+            return None
+        
+        except sqlite3.Error as e:
+            raise Exception(f"Error en la base de datos: {str(e)}")
+        except Exception as e:
+            raise Exception(f"Error al obtener candidato: {str(e)}")
 
     def listar_candidatos(self):
-   
-        self.cursor.execute('''
-            SELECT 
-                nombre, 
-                apellido, 
-                idiomas, 
-                habilidades, 
-                preferencia_salarial, 
-                ubicacion
-            FROM candidatos
-        ''')
+        try:
+            self.cursor.execute('''
+                SELECT 
+                    id,
+                    nombre, 
+                    apellido, 
+                    idiomas, 
+                    habilidades, 
+                    preferencia_salarial as preferencia_salarial, 
+                    ubicacion
+                FROM candidatos
+            ''')
         
         # Obtener los nombres de las columnas
-        columnas = [column[0] for column in self.cursor.description]
+            columnas = [column[0] for column in self.cursor.description]
         
         # Convertir resultados a lista de diccionarios
-        candidatos = []
-        for fila in self.cursor.fetchall():
-            candidato = dict(zip(columnas, fila))
-            candidatos.append(candidato)
-        
-        return candidatos
-    
+            candidatos = []
+            for fila in self.cursor.fetchall():
+                candidato = dict(zip(columnas, fila))
+            
+            # Convertir strings JSON a listas
+                try:
+                   candidato['idiomas'] = json.loads(candidato['idiomas']) if candidato['idiomas'] else []
+                   candidato['habilidades'] = json.loads(candidato['habilidades']) if candidato['habilidades'] else []
+                except json.JSONDecodeError:
+                # Si no es JSON válido, asumimos que es string separado por comas
+                    candidato['idiomas'] = [x.strip() for x in candidato['idiomas'].split(',')] if candidato['idiomas'] else []
+                    candidato['habilidades'] = [x.strip() for x in candidato['habilidades'].split(',')] if candidato['habilidades'] else []
+            
+                candidatos.append(candidato)
+          
+            return candidatos
+        except Exception as e:
+            raise Exception(f"Error al listar candidatos: {str(e)}")
+     
+    def actualizar_candidato(self, candidato):
+        """Actualiza un candidato existente en la base de datos"""
+        try:
+            self.cursor.execute("""
+                UPDATE candidatos 
+                SET nombre = ?, apellido = ?, idiomas = ?, habilidades = ?, 
+                    preferencia_salarial = ?, ubicacion = ?
+                WHERE id = ?
+            """, (
+                candidato['nombre'],
+                candidato['apellido'],
+                json.dumps(candidato['idiomas']),
+                json.dumps(candidato['habilidades']),
+                candidato['salario'],
+                candidato['ubicacion'],
+                candidato['id']
+            ))
+            self.conn.commit()
+        except Exception as e:
+            self.conn.rollback()
+            raise e
+
+    def eliminar_candidato(self, id_candidato):
+        """Elimina un candidato de la base de datos"""
+        try:
+            self.cursor.execute("DELETE FROM candidatos WHERE id = ?", (id_candidato,))
+            self.conn.commit()
+        except Exception as e:
+            self.conn.rollback()
+            raise e
+
     def listar_proyectos(self):
     
     
