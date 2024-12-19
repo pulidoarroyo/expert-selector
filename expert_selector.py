@@ -96,21 +96,27 @@ class ExpertSelector(QMainWindow):
         self.stacked_widget.addWidget(candidatos_widget)
 
     def crear_seccion_proyectos(self):
-        # Página de proyectos
+        """Actualización del método existente para incluir botones de actualizar y eliminar"""
         proyectos_widget = QWidget()
         proyectos_layout = QVBoxLayout()
 
-        # Botones de acciones de proyectos
+     # Botones de acciones de proyectos
         btn_ver_proyectos = QPushButton("Ver Proyectos")
         btn_ver_proyectos.clicked.connect(self.listar_proyectos)
         btn_agregar_proyecto = QPushButton("Agregar Proyecto")
         btn_agregar_proyecto.clicked.connect(self.agregar_proyecto)
+        btn_actualizar_proyecto = QPushButton("Actualizar Proyecto por ID")
+        btn_actualizar_proyecto.clicked.connect(self.actualizar_proyecto_por_id)
+        btn_eliminar_proyecto = QPushButton("Eliminar Proyecto por ID")
+        btn_eliminar_proyecto.clicked.connect(self.eliminar_proyecto_por_id)
         btn_ver_coincidencias = QPushButton("Ver Coincidencias")
-        btn_ver_coincidencias.clicked.connect(self.ver_coincidencias)
+       # btn_ver_coincidencias.clicked.connect(self.ver_coincidencias)
 
         proyectos_layout.addWidget(btn_ver_proyectos)
         proyectos_layout.addWidget(btn_agregar_proyecto)
-        proyectos_layout.addWidget(btn_ver_coincidencias)
+        proyectos_layout.addWidget(btn_actualizar_proyecto)
+        proyectos_layout.addWidget(btn_eliminar_proyecto)
+      #  proyectos_layout.addWidget(btn_ver_coincidencias)
         proyectos_layout.addStretch(1)
 
         proyectos_widget.setLayout(proyectos_layout)
@@ -384,6 +390,198 @@ class ExpertSelector(QMainWindow):
      dialog.setLayout(layout)
      dialog.exec_()   
 
+    def actualizar_proyecto_por_id(self):
+        """Diálogo para actualizar un proyecto existente"""
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Actualizar Proyecto por ID")
+        dialog.setGeometry(250, 250, 300, 100)
+    
+        layout = QVBoxLayout()
+    
+    # Campo para ID
+        id_input = QLineEdit()
+        id_input.setPlaceholderText("Ingrese ID del proyecto")
+    
+    # Botón buscar
+        btn_buscar = QPushButton("Buscar y Actualizar")
+        btn_buscar.clicked.connect(lambda: self.buscar_y_actualizar_proyecto(id_input.text(), dialog))
+    
+        layout.addWidget(QLabel("ID del Proyecto:"))
+        layout.addWidget(id_input)
+        layout.addWidget(btn_buscar)
+    
+        dialog.setLayout(layout)
+        dialog.exec_()
+
+    def buscar_y_actualizar_proyecto(self, id_proyecto, dialog_previo):
+        try:
+            if not id_proyecto.isdigit():
+                QMessageBox.warning(self, "Error", "Por favor ingrese un ID válido")
+                return
+            
+            proyecto = self.db_manager.obtener_proyecto_por_id(int(id_proyecto))
+        
+            if proyecto:
+                dialog_previo.accept()
+                self.actualizar_proyecto(proyecto)
+            else:
+                QMessageBox.warning(self, "Error", "No se encontró un proyecto con ese ID")
+            
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Error al buscar proyecto: {str(e)}")
+
+    def actualizar_proyecto(self, proyecto):
+        """Diálogo para actualizar los datos del proyecto"""
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Actualizar Proyecto")
+        dialog.setGeometry(250, 250, 600, 700)
+
+        layout = QFormLayout()
+
+    # Campos del formulario pre-poblados
+        nombre_empresa = QLineEdit(proyecto['nombre_empresa'])
+        nombre_proyecto = QLineEdit(proyecto['nombre_proyecto'])
+        descripcion = QTextEdit()
+        descripcion.setText(proyecto['descripcion'])
+
+    # Ubicación
+        ubicacion = QComboBox()
+        ubicacion.addItems(self.db_manager.obtener_paises())
+        ubicacion.setCurrentText(proyecto['ubicacion'])
+
+    # Idiomas requeridos
+        idiomas = QWidget()
+        idiomas_layout = QVBoxLayout()
+        idiomas_checks = []
+        for idioma in self.db_manager.obtener_idiomas():
+            check = QCheckBox(idioma)
+            check.setChecked(idioma in proyecto['idiomas_requeridos'])
+            idiomas_layout.addWidget(check)
+            idiomas_checks.append(check)
+        idiomas.setLayout(idiomas_layout)
+
+    # Habilidades requeridas
+        habilidades = QWidget()
+        habilidades_layout = QVBoxLayout()
+        habilidades_checks = []
+        for habilidad in self.db_manager.obtener_habilidades():
+            check = QCheckBox(habilidad)
+            check.setChecked(habilidad in proyecto['habilidades_requeridas'])
+            habilidades_layout.addWidget(check)
+            habilidades_checks.append(check)
+        habilidades.setLayout(habilidades_layout)
+
+    # Salario mínimo
+        salario_minimo = QComboBox()
+        salario_minimo.addItems(self.db_manager.obtener_salarios())
+        salario_minimo.setCurrentText(proyecto['salario_minimo'])
+
+    # Botón actualizar
+        btn_actualizar = QPushButton("Actualizar Proyecto")
+        btn_actualizar.clicked.connect(lambda: self.guardar_actualizacion_proyecto(
+            proyecto['id'],
+            nombre_empresa.text(),
+            nombre_proyecto.text(),
+            descripcion.toPlainText(),
+            ubicacion.currentText(),
+            [check.text() for check in idiomas_checks if check.isChecked()],
+            [check.text() for check in habilidades_checks if check.isChecked()],
+            salario_minimo.currentText(),
+            dialog
+        ))
+    
+    # Agregar al layout
+        layout.addRow("Nombre de la Empresa:", nombre_empresa)
+        layout.addRow("Nombre del Proyecto:", nombre_proyecto)
+        layout.addRow("Descripción:", descripcion)
+        layout.addRow("Ubicación:", ubicacion)
+        layout.addRow("Idiomas Requeridos:", idiomas)
+        layout.addRow("Habilidades Requeridas:", habilidades)
+        layout.addRow("Salario Mínimo:", salario_minimo)
+        layout.addRow(btn_actualizar)
+
+        dialog.setLayout(layout)
+        dialog.exec_()
+
+    def guardar_actualizacion_proyecto(self, id_proyecto, nombre_empresa, nombre_proyecto, 
+                                     descripcion, ubicacion, idiomas_requeridos, 
+                                     habilidades_requeridas, salario_minimo, dialog):
+        """Guarda la actualización de un proyecto"""
+        if not nombre_empresa or not nombre_proyecto:
+            QMessageBox.warning(self, "Error", "Nombre de empresa y proyecto son obligatorios")
+            return
+   
+        proyecto_actualizado = {
+            'id': id_proyecto,
+            'nombre_empresa': nombre_empresa,
+            'nombre_proyecto': nombre_proyecto,
+            'descripcion': descripcion,
+            'ubicacion': ubicacion,
+            'idiomas_requeridos': idiomas_requeridos,
+            'habilidades_requeridas': habilidades_requeridas,
+            'salario_minimo': salario_minimo
+        }
+
+        try:
+            self.db_manager.actualizar_proyecto(proyecto_actualizado)
+            QMessageBox.information(self, "Éxito", "Proyecto actualizado correctamente.")
+            dialog.accept()
+            self.listar_proyectos()
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"No se pudo actualizar el proyecto: {str(e)}")
+
+    def eliminar_proyecto_por_id(self):
+        """Diálogo para eliminar un proyecto"""
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Eliminar Proyecto por ID")
+        dialog.setGeometry(250, 250, 300, 100)
+      
+        layout = QVBoxLayout()
+    
+    # Campo para ID
+        id_input = QLineEdit()
+        id_input.setPlaceholderText("Ingrese ID del proyecto")
+    
+    # Botón eliminar
+        btn_eliminar = QPushButton("Buscar y Eliminar")
+        btn_eliminar.clicked.connect(lambda: self.buscar_y_eliminar_proyecto(id_input.text(), dialog))
+      
+        layout.addWidget(QLabel("ID del Proyecto:"))
+        layout.addWidget(id_input)
+        layout.addWidget(btn_eliminar)
+    
+        dialog.setLayout(layout)
+        dialog.exec_()
+
+    def buscar_y_eliminar_proyecto(self, id_proyecto, dialog):
+        """Busca y elimina un proyecto específico"""
+        try:
+            if not id_proyecto.isdigit():
+                QMessageBox.warning(self, "Error", "Por favor ingrese un ID válido")
+                return
+            
+            proyecto = self.db_manager.obtener_proyecto_por_id(int(id_proyecto))
+        
+            if proyecto:
+                confirmacion = QMessageBox.question(
+                    self,
+                    "Confirmar Eliminación",
+                    f"¿Está seguro de que desea eliminar el proyecto {proyecto['nombre_proyecto']} de la empresa {proyecto['nombre_empresa']} ?\n"
+                    "Esta acción también eliminará todas las coincidencias asociadas.",
+                    QMessageBox.Yes | QMessageBox.No,
+                    QMessageBox.No
+                )
+                
+                if confirmacion == QMessageBox.Yes:
+                    self.db_manager.eliminar_proyecto(proyecto['id'])
+                    QMessageBox.information(self, "Éxito", "Proyecto eliminado correctamente")
+                    dialog.accept()
+            else:
+                   QMessageBox.warning(self, "Error", "No se encontró un proyecto con ese ID")
+            
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Error al eliminar proyecto: {str(e)}")
+
     def agregar_candidato(self):
         # Diálogo para agregar candidato
         dialog = QDialog(self)
@@ -473,23 +671,23 @@ class ExpertSelector(QMainWindow):
         QMessageBox.critical(self, "Error", f"No se pudo guardar el candidato: {str(e)}")
 
     def agregar_proyecto(self):
-        """Diálogo para agregar un nuevo proyecto con generación de coincidencias"""
+        """Diálogo para agregar un nuevo proyecto"""
         dialog = QDialog(self)
         dialog.setWindowTitle("Agregar Proyecto")
         dialog.setGeometry(250, 250, 600, 700)
 
         layout = QFormLayout()
 
-        # Campos del formulario
+    # Campos del formulario
         nombre_empresa = QLineEdit()
         nombre_proyecto = QLineEdit()
         descripcion = QTextEdit()
 
-        # Ubicación (países de Latinoamérica)
+    # Ubicación (países de Latinoamérica)
         ubicacion = QComboBox()
         ubicacion.addItems(self.db_manager.obtener_paises())
 
-        # Idiomas requeridos (múltiple selección)
+    # Idiomas requeridos (múltiple selección)
         idiomas = QWidget()
         idiomas_layout = QVBoxLayout()
         idiomas_checks = []
@@ -499,7 +697,7 @@ class ExpertSelector(QMainWindow):
             idiomas_checks.append(check)
         idiomas.setLayout(idiomas_layout)
 
-        # Habilidades requeridas (múltiple selección)
+      # Habilidades requeridas (múltiple selección)
         habilidades = QWidget()
         habilidades_layout = QVBoxLayout()
         habilidades_checks = []
@@ -508,14 +706,14 @@ class ExpertSelector(QMainWindow):
             habilidades_layout.addWidget(check)
             habilidades_checks.append(check)
         habilidades.setLayout(habilidades_layout)
-
-        # Salario mínimo
+ 
+      # Salario mínimo
         salario_minimo = QComboBox()
         salario_minimo.addItems(self.db_manager.obtener_salarios())
 
-        # Botón guardar
-        btn_guardar = QPushButton("Guardar Proyecto y Generar Coincidencias")
-        btn_guardar.clicked.connect(lambda: self.guardar_proyecto_y_generar_coincidencias(
+    # Botón guardar
+        btn_guardar = QPushButton("Guardar Proyecto")
+        btn_guardar.clicked.connect(lambda: self.guardar_proyecto(
             nombre_empresa.text(),
             nombre_proyecto.text(),
             descripcion.toPlainText(),
@@ -525,8 +723,8 @@ class ExpertSelector(QMainWindow):
             salario_minimo.currentText(),
             dialog
         ))
-
-        # Agregar al layout
+  
+      # Agregar al layout
         layout.addRow("Nombre de la Empresa:", nombre_empresa)
         layout.addRow("Nombre del Proyecto:", nombre_proyecto)
         layout.addRow("Descripción del Proyecto:", descripcion)
@@ -539,22 +737,22 @@ class ExpertSelector(QMainWindow):
         dialog.setLayout(layout)
         dialog.exec_()
 
-    def guardar_proyecto_y_generar_coincidencias(self, 
-                                                 nombre_empresa, 
-                                                 nombre_proyecto, 
-                                                 descripcion, 
-                                                 ubicacion, 
-                                                 idiomas_requeridos, 
-                                                 habilidades_requeridas, 
-                                                 salario_minimo, 
-                                                 dialog):
-        """Guarda el proyecto y genera coincidencias automáticamente"""
-        # Validar campos obligatorios
+    def guardar_proyecto(self, 
+                        nombre_empresa, 
+                        nombre_proyecto, 
+                        descripcion, 
+                        ubicacion, 
+                        idiomas_requeridos, 
+                        habilidades_requeridas, 
+                        salario_minimo, 
+                        dialog):
+        """Guarda el proyecto en la base de datos"""
+    # Validar campos obligatorios
         if not nombre_empresa or not nombre_proyecto:
             QMessageBox.warning(self, "Error", "Nombre de empresa y proyecto son obligatorios")
             return
 
-        # Preparar datos del proyecto
+    # Preparar datos del proyecto
         proyecto = {
             'nombre_empresa': nombre_empresa,
             'nombre_proyecto': nombre_proyecto,
@@ -563,73 +761,17 @@ class ExpertSelector(QMainWindow):
             'idiomas_requeridos': idiomas_requeridos,
             'habilidades_requeridas': habilidades_requeridas,
             'salario_minimo': salario_minimo
-        }
+    }
 
-        # Guardar proyecto en base de datos
-        proyecto_id = self.db_manager.guardar_proyecto(proyecto)
-
-        # Generar coincidencias
         try:
-            coincidencias = self.matching_algorithm.generar_coincidencias(proyecto_id)
-            
-            # Guardar coincidencias
-            self.db_manager.guardar_coincidencias(coincidencias)
-
-            # Mostrar mensaje de éxito
-            QMessageBox.information(self, "Éxito", 
-                f"Proyecto guardado. Se encontraron {len(coincidencias)} coincidencias.")
-
-            # Cerrar diálogo
+          # Guardar proyecto en base de datos
+            self.db_manager.guardar_proyecto(proyecto)
+        
+         # Mostrar mensaje de éxito
+            QMessageBox.information(self, "Éxito", "Proyecto guardado correctamente.")
+        
+        # Cerrar diálogo
             dialog.accept()
-
+        
         except Exception as e:
-            QMessageBox.critical(self, "Error", f"No se pudieron generar coincidencias: {str(e)}")
-
-    def ver_coincidencias(self):
-        """Diálogo para seleccionar y mostrar coincidencias de proyectos"""
-        dialog = QDialog(self)
-        dialog.setWindowTitle("Coincidencias de Proyectos")
-        dialog.setGeometry(250, 250, 800, 600)
-
-        layout = QVBoxLayout()
-
-        # Selector de proyectos
-        proyectos_combo = QComboBox()
-        self.cursor.execute('SELECT id, nombre_proyecto FROM proyectos')
-        proyectos = self.cursor.fetchall()
-        proyectos_combo.addItems([p[1] for p in proyectos])
-
-        # Tabla de coincidencias
-        tabla_coincidencias = QTableWidget()
-        tabla_coincidencias.setColumnCount(5)
-        tabla_coincidencias.setHorizontalHeaderLabels([
-            "Candidato", "Proyecto", "% Coincidencia", 
-            "Habilidades", "Idiomas"
-        ])
-
-        # Función para cargar coincidencias
-        def cargar_coincidencias():
-            # Obtener ID del proyecto seleccionado
-            proyecto_seleccionado = proyectos[proyectos_combo.currentIndex()][0]
-            
-            # Obtener coincidencias
-            coincidencias = self.db_manager.obtener_coincidencias_proyecto(proyecto_seleccionado)
-            
-            # Llenar tabla
-            tabla_coincidencias.setRowCount(len(coincidencias))
-            for fila, coincidencia in enumerate(coincidencias):
-                tabla_coincidencias.setItem(fila, 0, QTableWidgetItem(coincidencia['nombre_candidato']))
-                tabla_coincidencias.setItem(fila, 1, QTableWidgetItem(coincidencia['nombre_proyecto']))
-                tabla_coincidencias.setItem(fila, 2, QTableWidgetItem(str(coincidencia['porcentaje_coincidencia'])))
-                tabla_coincidencias.setItem(fila, 3, QTableWidgetItem(str(coincidencia['detalles']['habilidades'])))
-                tabla_coincidencias.setItem(fila, 4, QTableWidgetItem(str(coincidencia['detalles']['idiomas'])))
-
-        proyectos_combo.currentIndexChanged.connect(cargar_coincidencias)
-
-        # Agregar widgets al layout
-        layout.addWidget(QLabel("Seleccionar Proyecto:"))
-        layout.addWidget(proyectos_combo)
-        layout.addWidget(tabla_coincidencias)
-
-        dialog.setLayout(layout)
-        dialog.exec_()
+            QMessageBox.critical(self, "Error", f"No se pudo guardar el proyecto: {str(e)}")

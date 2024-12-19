@@ -245,6 +245,89 @@ class DatabaseManager:
         ))
         self.conn.commit()
         return self.cursor.lastrowid
+    
+    def obtener_proyecto_por_id(self, id_proyecto):
+        """Obtiene un proyecto específico por su ID"""
+        try:
+            self.cursor.execute('''
+                SELECT id, nombre_empresa, nombre_proyecto, descripcion, 
+                       ubicacion, idiomas_requeridos, habilidades_requeridas, 
+                       salario_minimo 
+                FROM proyectos 
+                WHERE id = ?
+            ''', (id_proyecto,))
+    
+            proyecto = self.cursor.fetchone()
+    
+            if proyecto:
+                try:
+                    idiomas = proyecto[5].split(', ') if proyecto[5] else []
+                    habilidades = proyecto[6].split(', ') if proyecto[6] else []
+                except AttributeError:
+                    idiomas = []
+                    habilidades = []
+            
+                return {
+                    'id': proyecto[0],
+                    'nombre_empresa': proyecto[1],
+                    'nombre_proyecto': proyecto[2],
+                    'descripcion': proyecto[3],
+                    'ubicacion': proyecto[4],
+                    'idiomas_requeridos': idiomas,
+                    'habilidades_requeridas': habilidades,
+                    'salario_minimo': proyecto[7]
+                }
+            return None
+    
+        except sqlite3.Error as e:
+            raise Exception(f"Error en la base de datos: {str(e)}")
+        except Exception as e:
+            raise Exception(f"Error al obtener proyecto: {str(e)}")
+
+    def actualizar_proyecto(self, proyecto):
+        """Actualiza un proyecto existente en la base de datos"""
+        try:
+          # Convertir listas a strings
+            idiomas = ', '.join(proyecto['idiomas_requeridos'])
+            habilidades = ', '.join(proyecto['habilidades_requeridas'])
+        
+            self.cursor.execute("""
+                UPDATE proyectos 
+                SET nombre_empresa = ?, 
+                    nombre_proyecto = ?, 
+                    descripcion = ?, 
+                    ubicacion = ?, 
+                    idiomas_requeridos = ?, 
+                    habilidades_requeridas = ?, 
+                    salario_minimo = ?
+                WHERE id = ?
+            """, (
+                proyecto['nombre_empresa'],
+                proyecto['nombre_proyecto'],
+                proyecto['descripcion'],
+                proyecto['ubicacion'],
+                idiomas,
+                habilidades,
+                proyecto['salario_minimo'],
+                proyecto['id']
+            ))
+            self.conn.commit()
+        except Exception as e:
+            self.conn.rollback()
+            raise e
+
+    def eliminar_proyecto(self, id_proyecto):
+        """Elimina un proyecto de la base de datos"""
+        try:
+            # Primero eliminar las coincidencias asociadas
+            self.cursor.execute("DELETE FROM coincidencias WHERE proyecto_id = ?", (id_proyecto,))
+            # Luego eliminar el proyecto
+            self.cursor.execute("DELETE FROM proyectos WHERE id = ?", (id_proyecto,))
+            self.conn.commit()
+        except Exception as e:
+            self.conn.rollback()
+            raise e
+    
 
     def __del__(self):
         """Cierra la conexión a la base de datos"""
