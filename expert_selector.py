@@ -5,33 +5,130 @@ from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, 
     QLabel, QLineEdit, QComboBox, QPushButton, QStackedWidget, 
     QTableWidget, QTableWidgetItem, QFormLayout, QCheckBox, QDialog, 
-    QMessageBox, QTextEdit
+    QMessageBox, QTextEdit, QScrollArea, QFrame
 )
-from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QFont
+from PyQt5.QtCore import Qt, QSize
+from PyQt5.QtGui import QFont, QPalette, QColor, QIcon
 
 from database_manager import DatabaseManager
 from matching_algorithm import MatchingAlgorithm
 
-# Metodos de la creación de la ventana, las vistas y la carga de datos desde la bd
+class ModernStyle:
+    # Color scheme
+    PRIMARY_COLOR = "#2196F3"  # Blue
+    SECONDARY_COLOR = "#FFC107"  # Amber
+    BACKGROUND_COLOR = "#F5F5F5"  # Light Grey
+    CARD_COLOR = "#FFFFFF"  # White
+    TEXT_COLOR = "#333333"  # Dark Grey
+    
+    # Font styles
+    TITLE_FONT = QFont("Segoe UI", 24, QFont.Bold)
+    HEADER_FONT = QFont("Segoe UI", 16)
+    NORMAL_FONT = QFont("Segoe UI", 10)
+    
+    # Button styles
+    BUTTON_STYLE = """
+        QPushButton {
+            background-color: #2196F3;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        QPushButton:hover {
+            background-color: #1976D2;
+        }
+        QPushButton:pressed {
+            background-color: #0D47A1;
+        }
+    """
+    
+    NAV_BUTTON_STYLE = """
+        QPushButton {
+            background-color: transparent;
+            color: #333333;
+            border: none;
+            padding: 12px 24px;
+            text-align: left;
+            font-weight: bold;
+        }
+        QPushButton:hover {
+            background-color: #E3F2FD;
+        }
+        QPushButton:pressed {
+            background-color: #BBDEFB;
+        }
+    """
+    
+    # Table styles
+    TABLE_STYLE = """
+        QTableWidget {
+            background-color: white;
+            gridline-color: #E0E0E0;
+            border: 1px solid #E0E0E0;
+            border-radius: 4px;
+        }
+        QTableWidget::item {
+            padding: 8px;
+        }
+        QHeaderView::section {
+            background-color: #F5F5F5;
+            padding: 8px;
+            border: none;
+            font-weight: bold;
+        }
+    """
+
+class ModernDialog(QDialog):
+    def __init__(self, parent=None, title="Dialog"):
+        super().__init__(parent)
+        self.setWindowTitle(title)
+        self.setStyleSheet(f"background-color: {ModernStyle.BACKGROUND_COLOR};")
+        self.setFont(ModernStyle.NORMAL_FONT)
+
 class ExpertSelector(QMainWindow):
     def __init__(self):
         super().__init__()
         self.db_manager = DatabaseManager()
         self.matching_algorithm = MatchingAlgorithm()
+        
+        self.setWindowIcon(QIcon('icon.png'))
+        
         self.initUI()
 
     def initUI(self):
         self.setWindowTitle("Expert Selector")
-        self.setGeometry(100, 100, 1000, 600)
+        self.setGeometry(100, 100, 1200, 800)
+        self.setStyleSheet(f"background-color: {ModernStyle.BACKGROUND_COLOR};")
 
         # Widget principal
         main_widget = QWidget()
         main_layout = QHBoxLayout()
+        main_layout.setSpacing(0)
+        main_layout.setContentsMargins(0, 0, 0, 0)
 
         # Panel lateral de navegación
-        nav_layout = QVBoxLayout()
-        
+        nav_panel = QFrame()
+        nav_panel.setStyleSheet(f"""
+            QFrame {{
+                background-color: {ModernStyle.CARD_COLOR};
+                border-right: 1px solid #E0E0E0;
+            }}
+        """)
+        nav_panel.setFixedWidth(250)
+        nav_layout = QVBoxLayout(nav_panel)
+        nav_layout.setContentsMargins(0, 20, 0, 20)
+        nav_layout.setSpacing(5)
+
+        # Logo o título en el panel de navegación
+        logo_label = QLabel("Expert\nSelector")
+        logo_label.setFont(ModernStyle.TITLE_FONT)
+        logo_label.setAlignment(Qt.AlignCenter)
+        logo_label.setStyleSheet(f"color: {ModernStyle.PRIMARY_COLOR};")
+        logo_label.setContentsMargins(0, 0, 0, 30)
+        nav_layout.addWidget(logo_label)
+
         # Botones de navegación
         nav_buttons = [
             ("Candidatos", self.mostrar_candidatos),
@@ -40,83 +137,128 @@ class ExpertSelector(QMainWindow):
 
         for texto, funcion in nav_buttons:
             btn = QPushButton(texto)
+            btn.setStyleSheet(ModernStyle.NAV_BUTTON_STYLE)
+            btn.setFont(ModernStyle.NORMAL_FONT)
             btn.clicked.connect(funcion)
             nav_layout.addWidget(btn)
 
         nav_layout.addStretch(1)
 
-        # Título principal
-        titulo = QLabel("Expert Selector")
-        titulo.setAlignment(Qt.AlignCenter)
-        font = QFont()
-        font.setPointSize(24)
-        titulo.setFont(font)
+        # Contenedor principal de contenido
+        content_container = QWidget()
+        content_layout = QVBoxLayout(content_container)
+        content_layout.setContentsMargins(30, 30, 30, 30)
 
-        # Contenedor de contenido
+        # Contenedor de contenido con scroll
+        scroll_area = QScrollArea()
+        scroll_area.setWidgetResizable(True)
+        scroll_area.setStyleSheet("""
+            QScrollArea {
+                border: none;
+                background-color: transparent;
+            }
+            QScrollBar:vertical {
+                border: none;
+                background-color: #F5F5F5;
+                width: 10px;
+                margin: 0px;
+            }
+            QScrollBar::handle:vertical {
+                background-color: #BDBDBD;
+                border-radius: 5px;
+                min-height: 20px;
+            }
+            QScrollBar::handle:vertical:hover {
+                background-color: #9E9E9E;
+            }
+        """)
+
         self.stacked_widget = QStackedWidget()
+        scroll_area.setWidget(self.stacked_widget)
+        content_layout.addWidget(scroll_area)
 
-        # Layouts de secciones
+        # Crear secciones
         self.crear_seccion_candidatos()
         self.crear_seccion_proyectos()
 
-        # Layout principal
-        main_layout.addLayout(nav_layout)
-        
-        content_layout = QVBoxLayout()
-        content_layout.addWidget(titulo)
-        content_layout.addWidget(self.stacked_widget)
-
-        main_layout.addLayout(content_layout)
+        # Añadir widgets al layout principal
+        main_layout.addWidget(nav_panel)
+        main_layout.addWidget(content_container, 1)
 
         main_widget.setLayout(main_layout)
         self.setCentralWidget(main_widget)
 
     def crear_seccion_candidatos(self):
-    # Página de candidatos
         candidatos_widget = QWidget()
         candidatos_layout = QVBoxLayout()
+        candidatos_layout.setSpacing(20)
 
-    # Botones de acciones de candidatos
-        btn_ver_candidatos = QPushButton("Ver Candidatos")
-        btn_ver_candidatos.clicked.connect(self.listar_candidatos)
-        btn_agregar_candidato = QPushButton("Agregar Candidato")
-        btn_agregar_candidato.clicked.connect(self.agregar_candidato) 
-        btn_actualizar_por_id = QPushButton("Actualizar Candidato por ID")
-        btn_actualizar_por_id.clicked.connect(self.actualizar_candidato_por_id)
-        btn_eliminar_por_id = QPushButton("Eliminar Candidato por ID")
-        btn_eliminar_por_id.clicked.connect(self.eliminar_candidato_por_id)
+        # Título de la sección
+        titulo = QLabel("Gestión de Candidatos")
+        titulo.setFont(ModernStyle.HEADER_FONT)
+        titulo.setStyleSheet(f"color: {ModernStyle.TEXT_COLOR};")
+        candidatos_layout.addWidget(titulo)
 
-        candidatos_layout.addWidget(btn_ver_candidatos)
-        candidatos_layout.addWidget(btn_agregar_candidato)
-        candidatos_layout.addWidget(btn_actualizar_por_id)
-        candidatos_layout.addWidget(btn_eliminar_por_id)
+        # Contenedor de botones
+        buttons_container = QWidget()
+        buttons_layout = QHBoxLayout()
+        buttons_layout.setSpacing(10)
+
+        # Botones de acción
+        botones = [
+            ("Ver Candidatos", self.listar_candidatos),
+            ("Agregar Candidato", self.agregar_candidato),
+            ("Actualizar Candidato", self.actualizar_candidato_por_id),
+            ("Eliminar Candidato", self.eliminar_candidato_por_id)
+        ]
+
+        for texto, funcion in botones:
+            btn = QPushButton(texto)
+            btn.setStyleSheet(ModernStyle.BUTTON_STYLE)
+            btn.setFont(ModernStyle.NORMAL_FONT)
+            btn.clicked.connect(funcion)
+            buttons_layout.addWidget(btn)
+
+        buttons_container.setLayout(buttons_layout)
+        candidatos_layout.addWidget(buttons_container)
         candidatos_layout.addStretch(1)
 
         candidatos_widget.setLayout(candidatos_layout)
         self.stacked_widget.addWidget(candidatos_widget)
 
     def crear_seccion_proyectos(self):
-        """Actualización del método existente para incluir botones de actualizar y eliminar"""
         proyectos_widget = QWidget()
         proyectos_layout = QVBoxLayout()
+        proyectos_layout.setSpacing(20)
 
-     # Botones de acciones de proyectos
-        btn_ver_proyectos = QPushButton("Ver Proyectos")
-        btn_ver_proyectos.clicked.connect(self.listar_proyectos)
-        btn_agregar_proyecto = QPushButton("Agregar Proyecto")
-        btn_agregar_proyecto.clicked.connect(self.agregar_proyecto)
-        btn_actualizar_proyecto = QPushButton("Actualizar Proyecto por ID")
-        btn_actualizar_proyecto.clicked.connect(self.actualizar_proyecto_por_id)
-        btn_eliminar_proyecto = QPushButton("Eliminar Proyecto por ID")
-        btn_eliminar_proyecto.clicked.connect(self.eliminar_proyecto_por_id)
-        btn_ver_coincidencias = QPushButton("Ver Coincidencias")
-       # btn_ver_coincidencias.clicked.connect(self.ver_coincidencias)
+        # Título de la sección
+        titulo = QLabel("Gestión de Proyectos")
+        titulo.setFont(ModernStyle.HEADER_FONT)
+        titulo.setStyleSheet(f"color: {ModernStyle.TEXT_COLOR};")
+        proyectos_layout.addWidget(titulo)
 
-        proyectos_layout.addWidget(btn_ver_proyectos)
-        proyectos_layout.addWidget(btn_agregar_proyecto)
-        proyectos_layout.addWidget(btn_actualizar_proyecto)
-        proyectos_layout.addWidget(btn_eliminar_proyecto)
-      #  proyectos_layout.addWidget(btn_ver_coincidencias)
+        # Contenedor de botones
+        buttons_container = QWidget()
+        buttons_layout = QHBoxLayout()
+        buttons_layout.setSpacing(10)
+
+        # Botones de acción
+        botones = [
+            ("Ver Proyectos", self.listar_proyectos),
+            ("Agregar Proyecto", self.agregar_proyecto),
+            ("Actualizar Proyecto", self.actualizar_proyecto_por_id),
+            ("Eliminar Proyecto", self.eliminar_proyecto_por_id)
+        ]
+
+        for texto, funcion in botones:
+            btn = QPushButton(texto)
+            btn.setStyleSheet(ModernStyle.BUTTON_STYLE)
+            btn.setFont(ModernStyle.NORMAL_FONT)
+            btn.clicked.connect(funcion)
+            buttons_layout.addWidget(btn)
+
+        buttons_container.setLayout(buttons_layout)
+        proyectos_layout.addWidget(buttons_container)
         proyectos_layout.addStretch(1)
 
         proyectos_widget.setLayout(proyectos_layout)
