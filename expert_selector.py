@@ -132,7 +132,8 @@ class ExpertSelector(QMainWindow):
         # Botones de navegación
         nav_buttons = [
             ("Candidatos", self.mostrar_candidatos),
-            ("Proyectos", self.mostrar_proyectos)
+            ("Proyectos", self.mostrar_proyectos),
+            ("Coincidencias", self.mostrar_coincidencias)
         ]
 
         for texto, funcion in nav_buttons:
@@ -180,6 +181,7 @@ class ExpertSelector(QMainWindow):
         # Crear secciones
         self.crear_seccion_candidatos()
         self.crear_seccion_proyectos()
+        self.crear_seccion_coincidencias()
 
         # Añadir widgets al layout principal
         main_layout.addWidget(nav_panel)
@@ -917,3 +919,175 @@ class ExpertSelector(QMainWindow):
         
         except Exception as e:
             QMessageBox.critical(self, "Error", f"No se pudo guardar el proyecto: {str(e)}")
+
+    def crear_seccion_coincidencias(self):
+        """Crea la sección de coincidencias"""
+        coincidencias_widget = QWidget()
+        coincidencias_layout = QVBoxLayout()
+        coincidencias_layout.setSpacing(20)
+
+        # Título de la sección
+        titulo = QLabel("Gestión de Coincidencias")
+        titulo.setFont(ModernStyle.HEADER_FONT)
+        titulo.setStyleSheet(f"color: {ModernStyle.TEXT_COLOR};")
+        coincidencias_layout.addWidget(titulo)
+
+        # Contenedor de botones
+        buttons_container = QWidget()
+        buttons_layout = QHBoxLayout()
+        buttons_layout.setSpacing(10)
+
+        # Botones de acción
+        botones = [
+            ("Generar Coincidencias", self.generar_coincidencias),
+            ("Listar Coincidencias", self.listar_coincidencias)
+        ]
+
+        for texto, funcion in botones:
+            btn = QPushButton(texto)
+            btn.setStyleSheet(ModernStyle.BUTTON_STYLE)
+            btn.setFont(ModernStyle.NORMAL_FONT)
+            btn.clicked.connect(funcion)
+            buttons_layout.addWidget(btn)
+
+        buttons_container.setLayout(buttons_layout)
+        coincidencias_layout.addWidget(buttons_container)
+        coincidencias_layout.addStretch(1)
+
+        coincidencias_widget.setLayout(coincidencias_layout)
+        self.stacked_widget.addWidget(coincidencias_widget)
+
+    def mostrar_coincidencias(self):
+        """Muestra la sección de coincidencias"""
+        self.stacked_widget.setCurrentIndex(2)
+
+    def generar_coincidencias(self):
+        """Diálogo para generar coincidencias para un proyecto específico"""
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Generar Coincidencias")
+        dialog.setGeometry(250, 250, 300, 150)
+
+        layout = QVBoxLayout()
+
+        # Campo para ID del proyecto
+        id_label = QLabel("ID del Proyecto:")
+        id_input = QLineEdit()
+        id_input.setPlaceholderText("Ingrese ID del proyecto")
+
+        # Botón para generar
+        btn_generar = QPushButton("Generar Coincidencias")
+        btn_generar.clicked.connect(lambda: self.ejecutar_generacion_coincidencias(id_input.text(), dialog))
+
+        layout.addWidget(id_label)
+        layout.addWidget(id_input)
+        layout.addWidget(btn_generar)
+
+        dialog.setLayout(layout)
+        dialog.exec_()
+
+    def ejecutar_generacion_coincidencias(self, id_proyecto, dialog):
+        """Ejecuta el proceso de generación de coincidencias"""
+        try:
+            if not id_proyecto.isdigit():
+                QMessageBox.warning(self, "Error", "Por favor ingrese un ID válido")
+                return
+
+            # Obtener proyecto
+            proyecto = self.db_manager.obtener_proyecto_por_id(int(id_proyecto))
+            
+            if not proyecto:
+                QMessageBox.warning(self, "Error", "No se encontró el proyecto especificado")
+                return
+
+            # Generar coincidencias usando el algoritmo de matching
+            coincidencias = self.matching_algorithm.generar_coincidencias(proyecto)
+            
+            # Guardar coincidencias en la base de datos
+            self.db_manager.guardar_coincidencias(int(id_proyecto), coincidencias)
+            
+            QMessageBox.information(
+                self, 
+                "Éxito", 
+                f"Se generaron {len(coincidencias)} coincidencias para el proyecto"
+            )
+            dialog.accept()
+
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Error al generar coincidencias: {str(e)}")
+
+    def listar_coincidencias(self):
+        """Diálogo para mostrar coincidencias de un proyecto específico"""
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Listar Coincidencias")
+        dialog.setGeometry(250, 250, 300, 150)
+
+        layout = QVBoxLayout()
+
+        # Campo para ID del proyecto
+        id_label = QLabel("ID del Proyecto:")
+        id_input = QLineEdit()
+        id_input.setPlaceholderText("Ingrese ID del proyecto")
+
+        # Botón para buscar
+        btn_buscar = QPushButton("Buscar Coincidencias")
+        btn_buscar.clicked.connect(lambda: self.mostrar_lista_coincidencias(id_input.text(), dialog))
+
+        layout.addWidget(id_label)
+        layout.addWidget(id_input)
+        layout.addWidget(btn_buscar)
+
+        dialog.setLayout(layout)
+        dialog.exec_()
+
+    def mostrar_lista_coincidencias(self, id_proyecto, dialog_previo):
+        """Muestra la lista de coincidencias para un proyecto específico"""
+        try:
+            if not id_proyecto.isdigit():
+                QMessageBox.warning(self, "Error", "Por favor ingrese un ID válido")
+                return
+
+            # Obtener coincidencias
+            coincidencias = self.db_manager.obtener_coincidencias(int(id_proyecto))
+            
+            if not coincidencias:
+                QMessageBox.information(self, "Info", "No se encontraron coincidencias para este proyecto")
+                return
+
+            # Crear nuevo diálogo para mostrar coincidencias
+            lista_dialog = QDialog(self)
+            lista_dialog.setWindowTitle(f"Coincidencias del Proyecto {id_proyecto}")
+            lista_dialog.setGeometry(200, 200, 900, 500)
+
+            layout = QVBoxLayout()
+            
+            # Crear tabla
+            tabla = QTableWidget()
+            tabla.setColumnCount(7)
+            tabla.setHorizontalHeaderLabels([
+                "ID Candidato", "Nombre", "Apellido", 
+                "Porcentaje Match", "Idiomas", "Habilidades", 
+                "Ubicación"
+            ])
+
+            # Poblar tabla
+            tabla.setRowCount(len(coincidencias))
+            for fila, coincidencia in enumerate(coincidencias):
+                tabla.setItem(fila, 0, QTableWidgetItem(str(coincidencia['id_candidato'])))
+                tabla.setItem(fila, 1, QTableWidgetItem(coincidencia['nombre']))
+                tabla.setItem(fila, 2, QTableWidgetItem(coincidencia['apellido']))
+                tabla.setItem(fila, 3, QTableWidgetItem(f"{coincidencia['porcentaje_match']}%"))
+                tabla.setItem(fila, 4, QTableWidgetItem(str(coincidencia['idiomas'])))
+                tabla.setItem(fila, 5, QTableWidgetItem(str(coincidencia['habilidades'])))
+                tabla.setItem(fila, 6, QTableWidgetItem(coincidencia['ubicacion']))
+
+            tabla.resizeColumnsToContents()
+            tabla.setSortingEnabled(True)
+
+            layout.addWidget(tabla)
+            lista_dialog.setLayout(layout)
+            
+            dialog_previo.accept()
+            lista_dialog.exec_()
+
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Error al listar coincidencias: {str(e)}")
