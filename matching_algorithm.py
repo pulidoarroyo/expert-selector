@@ -3,98 +3,129 @@ from typing import List, Dict, Any
 import json
 
 class MatchingAlgorithm:
-    def generar_coincidencias(self, proyecto_id, db_manager):
-        """
-        Genera coincidencias entre un proyecto y los candidatos disponibles
+    def __init__(self):
+        """Initialize weights for different matching criteria"""
+        self.weights = {
+            'idiomas': 0.3,        # 30% weight for language matches
+            'habilidades': 0.4,    # 40% weight for skill matches
+            'ubicacion': 0.15,     # 15% weight for location
+            'salario': 0.15        # 15% weight for salary expectations
+        }
         
-        :param proyecto_id: ID del proyecto a emparejar
-        :param db_manager: Instancia de DatabaseManager para consultas
-        :return: Lista de coincidencias
-        """
-        # Obtener detalles del proyecto
-        proyecto = self._obtener_proyecto(proyecto_id, db_manager)
+    def calcular_match_idiomas(self, idiomas_requeridos, idiomas_candidato):
+        """Calculate language match percentage"""
+        if not idiomas_requeridos or not idiomas_candidato:
+            return 0
+            
+        idiomas_requeridos = set(idiomas_requeridos)
+        idiomas_candidato = set(idiomas_candidato)
         
-        # Obtener todos los candidatos
-        candidatos = db_manager.listar_candidatos()
+        if not idiomas_requeridos:
+            return 1.0
+            
+        matches = idiomas_requeridos.intersection(idiomas_candidato)
+        return len(matches) / len(idiomas_requeridos)
         
-        # Lista para almacenar coincidencias
+    def calcular_match_habilidades(self, habilidades_requeridas, habilidades_candidato):
+        """Calculate skills match percentage"""
+        if not habilidades_requeridas or not habilidades_candidato:
+            return 0
+            
+        habilidades_requeridas = set(habilidades_requeridas)
+        habilidades_candidato = set(habilidades_candidato)
+        
+        if not habilidades_requeridas:
+            return 1.0
+            
+        matches = habilidades_requeridas.intersection(habilidades_candidato)
+        return len(matches) / len(habilidades_requeridas)
+
+    def calcular_match_ubicacion(self, ubicacion_proyecto, ubicacion_candidato):
+        """Calculate location match"""
+        if not ubicacion_proyecto or not ubicacion_candidato:
+            return 0
+            
+        if ubicacion_proyecto.lower() == ubicacion_candidato.lower():
+            return 1.0
+        return 0.5  # Assuming remote work is possible but not ideal
+        
+    def calcular_match_salario(self, salario_minimo_proyecto, preferencia_salarial_candidato):
+        """Calculate salary match"""
+        if not salario_minimo_proyecto or not preferencia_salarial_candidato:
+            return 0
+            
+        def extract_min_salary(salary_range):
+            try:
+                if isinstance(salary_range, (int, float)):
+                    return float(salary_range)
+                return float(salary_range.split('-')[0])
+            except (ValueError, IndexError, AttributeError):
+                if isinstance(salary_range, str) and salary_range.endswith('+'):
+                    return float(salary_range[:-1])
+                return 0
+                
+        min_proyecto = extract_min_salary(salario_minimo_proyecto)
+        min_candidato = extract_min_salary(preferencia_salarial_candidato)
+        
+        if min_candidato >= min_proyecto:
+            return 1.0
+        
+        ratio = min_candidato / min_proyecto if min_proyecto > 0 else 0
+        return max(0, min(1, ratio))
+        
+    def generar_coincidencias(self, proyecto, candidatos):
+        """Generate matches between a project and candidates"""
         coincidencias = []
         
-        # Calcular coincidencias para cada candidato
         for candidato in candidatos:
-            porcentaje_coincidencia = self._calcular_porcentaje_coincidencia(proyecto, candidato)
+            # Calculate individual matches
+            match_idiomas = self.calcular_match_idiomas(
+                proyecto.get('idiomas_requeridos', []),
+                candidato.get('idiomas', [])
+            )
             
-            # Solo incluir coincidencias que superen un umbral mínimo
-            if porcentaje_coincidencia >= 50:  # Umbral personalizable
-                detalles = {
-                    'habilidades': self._obtener_habilidades_coincidentes(proyecto, candidato),
-                    'idiomas': self._obtener_idiomas_coincidentes(proyecto, candidato)
-                }
-                
-                coincidencia = {
-                    'proyecto_id': proyecto_id,
-                    'candidato_id': candidato['id'],
-                    'nombre_candidato': f"{candidato['nombre']} {candidato['apellido']}",
-                    'nombre_proyecto': proyecto['nombre_proyecto'],
-                    'porcentaje_coincidencia': porcentaje_coincidencia,
-                    'detalles': detalles
-                }
-                
-                coincidencias.append(coincidencia)
+            match_habilidades = self.calcular_match_habilidades(
+                proyecto.get('habilidades_requeridas', []),
+                candidato.get('habilidades', [])
+            )
+            
+            match_ubicacion = self.calcular_match_ubicacion(
+                proyecto.get('ubicacion', ''),
+                candidato.get('ubicacion', '')
+            )
+            
+            match_salario = self.calcular_match_salario(
+                proyecto.get('salario_minimo', ''),
+                candidato.get('preferencia_salarial', '')
+            )
+            
+            # Calculate total score
+            score_total = (
+                match_idiomas * self.weights['idiomas'] +
+                match_habilidades * self.weights['habilidades'] +
+                match_ubicacion * self.weights['ubicacion'] +
+                match_salario * self.weights['salario']
+            )
+            
+            # Create match record with required fields for database
+            coincidencia = {
+                'id_candidato': candidato['id'],
+                'porcentaje_match': round(score_total * 100, 2),
+                'idiomas_match': list(set(proyecto.get('idiomas_requeridos', [])) & 
+                                    set(candidato.get('idiomas', []))),
+                'habilidades_match': list(set(proyecto.get('habilidades_requeridas', [])) & 
+                                        set(candidato.get('habilidades', []))),
+                'ubicacion_match': match_ubicacion == 1.0,
+                'salario_match': match_salario == 1.0
+            }
+            
+            coincidencias.append(coincidencia)
+        
+        # Sort matches by score
+        coincidencias.sort(key=lambda x: x['porcentaje_match'], reverse=True)
         
         return coincidencias
-    
-    def _obtener_proyecto(self, proyecto_id, db_manager):
-        """Obtiene los detalles de un proyecto específico"""
-        proyectos = db_manager.listar_proyectos()
-        return next((p for p in proyectos if p['id'] == proyecto_id), None)
-    
-    def _calcular_porcentaje_coincidencia(self, proyecto, candidato):
-        """
-        Calcula el porcentaje de coincidencia entre un proyecto y un candidato
-        
-        :param proyecto: Diccionario con detalles del proyecto
-        :param candidato: Diccionario con detalles del candidato
-        :return: Porcentaje de coincidencia (0-100)
-        """
-        # Dividir habilidades y convertir a conjuntos
-        habilidades_proyecto = set(proyecto['habilidades_requeridas'].split(', '))
-        habilidades_candidato = set(candidato['habilidades'].split(', '))
-        
-        # Dividir idiomas y convertir a conjuntos
-        idiomas_proyecto = set(proyecto['idiomas_requeridos'].split(', '))
-        idiomas_candidato = set(candidato['idiomas'].split(', '))
-        
-        # Calcular coincidencias
-        habilidades_match = len(habilidades_proyecto.intersection(habilidades_candidato)) / len(habilidades_proyecto) * 100
-        idiomas_match = len(idiomas_proyecto.intersection(idiomas_candidato)) / len(idiomas_proyecto) * 100
-        
-        # Ubicación
-        ubicacion_match = 20 if proyecto['ubicacion'] == candidato['ubicacion'] else 0
-        
-        # Salario (aproximado)
-        salario_proyecto = int(proyecto['salario_minimo'].split('-')[0])
-        salario_candidato = int(candidato['preferencia_salarial'].split('-')[0])
-        salario_match = max(0, 20 - abs(salario_proyecto - salario_candidato) / 100)
-        
-        # Calcular porcentaje total (peso diferente para cada factor)
-        porcentaje_total = (
-            habilidades_match * 0.4 +  # 40% para habilidades
-            idiomas_match * 0.2 +       # 20% para idiomas
-            ubicacion_match * 0.2 +     # 20% para ubicación
-            salario_match * 0.2         # 20% para salario
-        )
-        
-        return round(porcentaje_total, 2)
-    
-    def _obtener_habilidades_coincidentes(self, proyecto, candidato):
-        """Obtiene las habilidades que coinciden entre proyecto y candidato"""
-        habilidades_proyecto = set(proyecto['habilidades_requeridas'].split(', '))
-        habilidades_candidato = set(candidato['habilidades'].split(', '))
-        return list(habilidades_proyecto.intersection(habilidades_candidato))
-    
-    def _obtener_idiomas_coincidentes(self, proyecto, candidato):
-        """Obtiene los idiomas que coinciden entre proyecto y candidato"""
-        idiomas_proyecto = set(proyecto['idiomas_requeridos'].split(', '))
-        idiomas_candidato = set(candidato['idiomas'].split(', '))
-        return list(idiomas_proyecto.intersection(idiomas_candidato))
+
+    def obtener_mejores_coincidencias(self, coincidencias, limite=10):
+        """Return top N matches"""
+        return coincidencias[:limite]

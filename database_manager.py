@@ -37,7 +37,7 @@ class DatabaseManager:
         )
         ''')
 
-        # Tabla de coincidencias
+        # Tabla de coincidencias con la estructura corregida
         self.cursor.execute('''
         CREATE TABLE IF NOT EXISTS coincidencias (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -198,10 +198,9 @@ class DatabaseManager:
             raise e
 
     def listar_proyectos(self):
-    
-    
         self.cursor.execute('''
             SELECT 
+                id,
                 nombre_empresa, 
                 nombre_proyecto, 
                 descripcion, 
@@ -211,16 +210,25 @@ class DatabaseManager:
                 salario_minimo 
             FROM proyectos
         ''')
-        
+    
         # Obtener los nombres de las columnas
         columnas = [column[0] for column in self.cursor.description]
-        
+    
         # Convertir resultados a lista de diccionarios
         proyectos = []
         for fila in self.cursor.fetchall():
             proyecto = dict(zip(columnas, fila))
-            proyectos.append(proyecto)
         
+            # Convertir strings de idiomas y habilidades a listas
+            try:
+                proyecto['idiomas_requeridos'] = proyecto['idiomas_requeridos'].split(', ') if proyecto['idiomas_requeridos'] else []
+                proyecto['habilidades_requeridas'] = proyecto['habilidades_requeridas'].split(', ') if proyecto['habilidades_requeridas'] else []
+            except AttributeError:
+                proyecto['idiomas_requeridos'] = []
+                proyecto['habilidades_requeridas'] = []
+            
+            proyectos.append(proyecto)
+    
         return proyectos
     
     def guardar_proyecto(self, proyecto):
@@ -328,7 +336,95 @@ class DatabaseManager:
             self.conn.rollback()
             raise e
     
-
+    def guardar_coincidencias(self, proyecto_id, coincidencias):
+        """
+        Guarda las coincidencias generadas para un proyecto específico
+        Args:
+            proyecto_id (int): ID del proyecto
+            coincidencias (list): Lista de diccionarios con las coincidencias
+        """
+        try:
+            # Primero eliminamos coincidencias existentes para este proyecto
+            self.cursor.execute("DELETE FROM coincidencias WHERE proyecto_id = ?", (proyecto_id,))
+    
+            # Insertar las nuevas coincidencias
+            for coincidencia in coincidencias:
+                detalles = json.dumps({
+                    'idiomas_match': coincidencia.get('idiomas_match', []),
+                    'habilidades_match': coincidencia.get('habilidades_match', []),
+                    'ubicacion_match': coincidencia.get('ubicacion_match', False),
+                    'salario_match': coincidencia.get('salario_match', False)
+            })
+        
+                self.cursor.execute('''
+                    INSERT INTO coincidencias 
+                    (proyecto_id, candidato_id, porcentaje_coincidencia, detalles)
+                    VALUES (?, ?, ?, ?)
+            ''', (
+                    proyecto_id,
+                    coincidencia['id_candidato'],
+                    coincidencia['porcentaje_match'],
+                    detalles
+                ))
+    
+            self.conn.commit()
+        except Exception as e:
+            self.conn.rollback()
+            raise Exception(f"Error al guardar coincidencias: {str(e)}")
+        
+    def obtener_coincidencias(self, proyecto_id):
+        """
+        Obtiene las coincidencias para un proyecto específico
+    
+        Args:
+            proyecto_id (int): ID del proyecto
+        
+        Returns:
+            list: Lista de diccionarios con las coincidencias y detalles de los candidatos
+        """
+        try:
+            self.cursor.execute('''
+                    SELECT 
+                    c.id,
+                    c.candidato_id as id_candidato,
+                    ca.nombre,
+                    ca.apellido,
+                    c.porcentaje_coincidencia as porcentaje_match,
+                    ca.idiomas,
+                    ca.habilidades,
+                    ca.ubicacion,
+                    c.detalles
+                FROM coincidencias c
+                JOIN candidatos ca ON c.candidato_id = ca.id
+                WHERE c.proyecto_id = ?
+                ORDER BY c.porcentaje_coincidencia DESC
+            ''', (proyecto_id,))
+        
+         # Obtener los nombres de las columnas
+            columnas = [column[0] for column in self.cursor.description]
+        
+         # Convertir resultados a lista de diccionarios
+            coincidencias = []
+            for fila in self.cursor.fetchall():
+                coincidencia = dict(zip(columnas, fila))
+            
+             # Convertir strings JSON a listas
+                try:
+                    coincidencia['idiomas'] = json.loads(coincidencia['idiomas']) if coincidencia['idiomas'] else []
+                    coincidencia['habilidades'] = json.loads(coincidencia['habilidades']) if coincidencia['habilidades'] else []
+                    coincidencia['detalles'] = json.loads(coincidencia['detalles']) if coincidencia['detalles'] else {}
+                except json.JSONDecodeError:
+                 # Si no es JSON válido, asumimos que es string separado por comas
+                    coincidencia['idiomas'] = [x.strip() for x in coincidencia['idiomas'].split(',')] if coincidencia['idiomas'] else []
+                    coincidencia['habilidades'] = [x.strip() for x in coincidencia['habilidades'].split(',')] if coincidencia['habilidades'] else []
+                    coincidencia['detalles'] = {}
+            
+                coincidencias.append(coincidencia)
+        
+            return coincidencias
+        except Exception as e:
+            raise Exception(f"Error al obtener coincidencias: {str(e)}")
+    
     def __del__(self):
         """Cierra la conexión a la base de datos"""
         self.conn.close()

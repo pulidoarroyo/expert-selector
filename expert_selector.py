@@ -992,19 +992,35 @@ class ExpertSelector(QMainWindow):
                 QMessageBox.warning(self, "Error", "Por favor ingrese un ID válido")
                 return
 
+            proyecto_id = int(id_proyecto)
+        
             # Obtener proyecto
-            proyecto = self.db_manager.obtener_proyecto_por_id(int(id_proyecto))
-            
+            proyecto = self.db_manager.obtener_proyecto_por_id(proyecto_id)
+    
             if not proyecto:
                 QMessageBox.warning(self, "Error", "No se encontró el proyecto especificado")
                 return
 
+            # Asegurarnos que el proyecto tenga su ID
+            proyecto['id'] = proyecto_id
+ 
+            # Obtener todos los candidatos
+            candidatos = self.db_manager.listar_candidatos()
+     
+            if not candidatos:
+                QMessageBox.warning(self, "Error", "No hay candidatos registrados en el sistema")
+                return
+
             # Generar coincidencias usando el algoritmo de matching
-            coincidencias = self.matching_algorithm.generar_coincidencias(proyecto)
-            
+            coincidencias = self.matching_algorithm.generar_coincidencias(proyecto, candidatos)
+    
+            # Asegurarnos que cada coincidencia tenga el proyecto_id
+            for coincidencia in coincidencias:
+                coincidencia['proyecto_id'] = proyecto_id
+     
             # Guardar coincidencias en la base de datos
-            self.db_manager.guardar_coincidencias(int(id_proyecto), coincidencias)
-            
+            self.db_manager.guardar_coincidencias(proyecto_id, coincidencias)
+    
             QMessageBox.information(
                 self, 
                 "Éxito", 
