@@ -1,19 +1,17 @@
-import sqlite3
 from typing import List, Dict, Any
-import json
 
 class MatchingAlgorithm:
     def __init__(self):
-        """Initialize weights for different matching criteria"""
+        """Inicializar pesos para diferentes criterios de coincidencia"""
         self.weights = {
-            'idiomas': 0.3,        # 30% weight for language matches
-            'habilidades': 0.4,    # 40% weight for skill matches
-            'ubicacion': 0.15,     # 15% weight for location
-            'salario': 0.15        # 15% weight for salary expectations
+            'idiomas': 0.3,        # 30% de peso para coincidencias de idioma
+            'habilidades': 0.4,    # 40% de peso para coincidencias de habilidades
+            'ubicacion': 0.15,     # 15% de peso para la ubicación
+            'salario': 0.15        # 15% de peso para expectativas salariales
         }
         
     def calcular_match_idiomas(self, idiomas_requeridos, idiomas_candidato):
-        """Calculate language match percentage"""
+        """Calcular porcentaje de coincidencia de idiomas"""
         if not idiomas_requeridos or not idiomas_candidato:
             return 0
             
@@ -27,7 +25,7 @@ class MatchingAlgorithm:
         return len(matches) / len(idiomas_requeridos)
         
     def calcular_match_habilidades(self, habilidades_requeridas, habilidades_candidato):
-        """Calculate skills match percentage"""
+        """Calcular porcentaje de coincidencia de habilidades"""
         if not habilidades_requeridas or not habilidades_candidato:
             return 0
             
@@ -41,13 +39,13 @@ class MatchingAlgorithm:
         return len(matches) / len(habilidades_requeridas)
 
     def calcular_match_ubicacion(self, ubicacion_proyecto, ubicacion_candidato):
-        """Calculate location match"""
+        """Calcular coincidencia de ubicación"""
         if not ubicacion_proyecto or not ubicacion_candidato:
             return 0
             
         if ubicacion_proyecto.lower() == ubicacion_candidato.lower():
             return 1.0
-        return 0.5  # Assuming remote work is possible but not ideal
+        return 0.5  # Trabajar de forma remota es posible pero no ideal
         
     def calcular_match_salario(self, salario_minimo_proyecto, preferencia_salarial_candidato):
         """Calculate salary match"""
@@ -78,7 +76,7 @@ class MatchingAlgorithm:
         coincidencias = []
         
         for candidato in candidatos:
-            # Calculate individual matches
+            # Calcular coincidencias para cada candidato
             match_idiomas = self.calcular_match_idiomas(
                 proyecto.get('idiomas_requeridos', []),
                 candidato.get('idiomas', [])
@@ -99,7 +97,7 @@ class MatchingAlgorithm:
                 candidato.get('preferencia_salarial', '')
             )
             
-            # Calculate total score
+            # Calcular puntaje total basado en pesos
             score_total = (
                 match_idiomas * self.weights['idiomas'] +
                 match_habilidades * self.weights['habilidades'] +
@@ -107,7 +105,7 @@ class MatchingAlgorithm:
                 match_salario * self.weights['salario']
             )
             
-            # Create match record with required fields for database
+            # Crear objeto de coincidencia
             coincidencia = {
                 'id_candidato': candidato['id'],
                 'porcentaje_match': round(score_total * 100, 2),
@@ -121,7 +119,7 @@ class MatchingAlgorithm:
             
             coincidencias.append(coincidencia)
         
-        # Sort matches by score
+        # Ordenar coincidencias por puntaje de coincidencia
         coincidencias.sort(key=lambda x: x['porcentaje_match'], reverse=True)
         
         return coincidencias
