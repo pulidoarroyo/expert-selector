@@ -1,5 +1,6 @@
 import sqlite3
 import json
+import random
 
 class DatabaseManager:
     def __init__(self, db_path='expert_selector.db'):
@@ -13,7 +14,7 @@ class DatabaseManager:
         # Tabla de candidatos
         self.cursor.execute('''
         CREATE TABLE IF NOT EXISTS candidatos (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id INTEGER PRIMARY KEY,
             nombre TEXT,
             apellido TEXT,
             idiomas TEXT,
@@ -26,7 +27,7 @@ class DatabaseManager:
         # Tabla de proyectos
         self.cursor.execute('''
         CREATE TABLE IF NOT EXISTS proyectos (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id INTEGER PRIMARY KEY,
             nombre_empresa TEXT,
             nombre_proyecto TEXT,
             descripcion TEXT,
@@ -51,6 +52,29 @@ class DatabaseManager:
         ''')
         self.conn.commit()
 
+    def generar_id(self):
+            """Genera un ID único de 6 dígitos"""
+            base = random.randint(100000, 999999)
+            # Verifica que el ID no exista ya en ninguna tabla
+            while True:
+             # Verificar en todas las tablas
+                self.cursor.execute("SELECT 1 FROM candidatos WHERE id = ?", (base,))
+                if self.cursor.fetchone():
+                    base = random.randint(100000, 999999)
+                    continue
+                
+                self.cursor.execute("SELECT 1 FROM proyectos WHERE id = ?", (base,))
+                if self.cursor.fetchone():
+                    base = random.randint(100000, 999999)
+                    continue
+                
+                self.cursor.execute("SELECT 1 FROM coincidencias WHERE id = ?", (base,))
+                if self.cursor.fetchone():
+                    base = random.randint(100000, 999999)
+                    continue
+                
+                return base
+
     def obtener_idiomas(self):
         """Devuelve una lista de idiomas predefinidos"""
         return ['Español', 'Inglés', 'Portugués', 'Francés', 'Alemán']
@@ -70,15 +94,17 @@ class DatabaseManager:
     def guardar_candidato(self, candidato):
         """Guarda un nuevo candidato en la base de datos"""
         try:
+            id_candidato = self.generar_id()
             # Convertir listas a JSON strings
             idiomas_json = json.dumps(candidato.get('idiomas', []))
             habilidades_json = json.dumps(candidato.get('habilidades', []))
 
             self.cursor.execute('''
             INSERT INTO candidatos 
-            (nombre, apellido, idiomas, habilidades, preferencia_salarial, ubicacion) 
-            VALUES (?, ?, ?, ?, ?, ?)
+            (id, nombre, apellido, idiomas, habilidades, preferencia_salarial, ubicacion) 
+            VALUES (?, ?, ?, ?, ?, ?, ?)
             ''', (
+                id_candidato,
                 candidato['nombre'], 
                 candidato['apellido'], 
                 idiomas_json,
@@ -87,7 +113,7 @@ class DatabaseManager:
                candidato['ubicacion']
             ))
             self.conn.commit()
-            return self.cursor.lastrowid
+            return id_candidato
         except Exception as e:
             self.conn.rollback()
             raise Exception(f"Error al guardar candidato: {str(e)}")
@@ -233,27 +259,33 @@ class DatabaseManager:
     
     def guardar_proyecto(self, proyecto):
         """Guarda un nuevo proyecto en la base de datos"""
-        # Convertir listas de idiomas y habilidades a cadenas
-        idiomas = ', '.join(proyecto.get('idiomas_requeridos', []))
-        habilidades = ', '.join(proyecto.get('habilidades_requeridas', []))
+        try:
+            id_proyecto = self.generar_id()
+            # Convertir listas de idiomas y habilidades a cadenas
+            idiomas = ', '.join(proyecto.get('idiomas_requeridos', []))
+            habilidades = ', '.join(proyecto.get('habilidades_requeridas', []))
 
-        self.cursor.execute('''
-        INSERT INTO proyectos 
-        (nombre_empresa, nombre_proyecto, descripcion, ubicacion, 
-        idiomas_requeridos, habilidades_requeridas, salario_minimo) 
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-        ''', (
-            proyecto['nombre_empresa'], 
-            proyecto['nombre_proyecto'], 
-            proyecto['descripcion'], 
-            proyecto['ubicacion'], 
-            idiomas, 
-            habilidades, 
-            proyecto['salario_minimo']
-        ))
-        self.conn.commit()
-        return self.cursor.lastrowid
-    
+            self.cursor.execute('''
+            INSERT INTO proyectos 
+            (id, nombre_empresa, nombre_proyecto, descripcion, ubicacion, 
+            idiomas_requeridos, habilidades_requeridas, salario_minimo) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (
+                id_proyecto,
+                proyecto['nombre_empresa'], 
+                proyecto['nombre_proyecto'], 
+                proyecto['descripcion'], 
+                proyecto['ubicacion'], 
+                idiomas, 
+                habilidades, 
+                proyecto['salario_minimo']
+            ))
+            self.conn.commit()
+            return id_proyecto
+        except Exception as e:
+            self.conn.rollback()
+            raise Exception(f"Error al guardar proyecto: {str(e)}")
+        
     def obtener_proyecto_por_id(self, id_proyecto):
         """Obtiene un proyecto específico por su ID"""
         try:

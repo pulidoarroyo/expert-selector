@@ -203,11 +203,11 @@ class ExpertSelector(QMainWindow):
  
      layout = QVBoxLayout()
      tabla = QTableWidget()
-     tabla.setColumnCount(6)  # Added two columns for action buttons
+     tabla.setColumnCount(7)  
      tabla.setHorizontalHeaderLabels([
-        "Nombre", "Apellido", 
+        "ID","Nombre", "Apellido", 
         "Idiomas", "Habilidades", "Salario", 
-        "Ubicación", "Actualizar", "Eliminar"
+        "Ubicación"
     ])
 
     # Obtener candidatos desde la base de datos
@@ -215,12 +215,13 @@ class ExpertSelector(QMainWindow):
 
      tabla.setRowCount(len(candidatos))
      for fila, candidato in enumerate(candidatos):
-        tabla.setItem(fila, 0, QTableWidgetItem(str(candidato.get('nombre', ''))))
-        tabla.setItem(fila, 1, QTableWidgetItem(str(candidato.get('apellido', ''))))
-        tabla.setItem(fila, 2, QTableWidgetItem(str(candidato.get('idiomas', ''))))
-        tabla.setItem(fila, 3, QTableWidgetItem(str(candidato.get('habilidades', ''))))
-        tabla.setItem(fila, 4, QTableWidgetItem(str(candidato.get('preferencia_salarial', ''))))
-        tabla.setItem(fila, 5, QTableWidgetItem(str(candidato.get('ubicacion', ''))))
+        tabla.setItem(fila, 0, QTableWidgetItem(str(candidato.get('id', ''))))
+        tabla.setItem(fila, 1, QTableWidgetItem(str(candidato.get('nombre', ''))))
+        tabla.setItem(fila, 2, QTableWidgetItem(str(candidato.get('apellido', ''))))
+        tabla.setItem(fila, 3, QTableWidgetItem(str(candidato.get('idiomas', ''))))
+        tabla.setItem(fila, 4, QTableWidgetItem(str(candidato.get('habilidades', ''))))
+        tabla.setItem(fila, 5, QTableWidgetItem(str(candidato.get('preferencia_salarial', ''))))
+        tabla.setItem(fila, 6, QTableWidgetItem(str(candidato.get('ubicacion', ''))))
 
     # Hacer que la tabla sea editable y expandible
      tabla.resizeColumnsToContents()
@@ -429,9 +430,9 @@ class ExpertSelector(QMainWindow):
  
      layout = QVBoxLayout()
      tabla = QTableWidget()
-     tabla.setColumnCount(7)
+     tabla.setColumnCount(8)
      tabla.setHorizontalHeaderLabels([
-        "Empresa", "Nombre Proyecto", "Descripción", 
+        "ID","Empresa", "Nombre Proyecto", "Descripción", 
         "Ubicación", "Idiomas Requeridos", "Habilidades Requeridas", 
         "Salario Mínimo"
     ])
@@ -441,13 +442,14 @@ class ExpertSelector(QMainWindow):
 
      tabla.setRowCount(len(proyectos))
      for fila, proyecto in enumerate(proyectos):
-        tabla.setItem(fila, 0, QTableWidgetItem(str(proyecto.get('nombre_empresa', ''))))
-        tabla.setItem(fila, 1, QTableWidgetItem(str(proyecto.get('nombre_proyecto', ''))))
-        tabla.setItem(fila, 2, QTableWidgetItem(str(proyecto.get('descripcion', ''))))
-        tabla.setItem(fila, 3, QTableWidgetItem(str(proyecto.get('ubicacion', ''))))
-        tabla.setItem(fila, 4, QTableWidgetItem(str(proyecto.get('idiomas_requeridos', ''))))
-        tabla.setItem(fila, 5, QTableWidgetItem(str(proyecto.get('habilidades_requeridas', ''))))
-        tabla.setItem(fila, 6, QTableWidgetItem(str(proyecto.get('salario_minimo', ''))))
+        tabla.setItem(fila, 0, QTableWidgetItem(str(proyecto.get('id', ''))))
+        tabla.setItem(fila, 1, QTableWidgetItem(str(proyecto.get('nombre_empresa', ''))))
+        tabla.setItem(fila, 2, QTableWidgetItem(str(proyecto.get('nombre_proyecto', ''))))
+        tabla.setItem(fila, 3, QTableWidgetItem(str(proyecto.get('descripcion', ''))))
+        tabla.setItem(fila, 4, QTableWidgetItem(str(proyecto.get('ubicacion', ''))))
+        tabla.setItem(fila, 5, QTableWidgetItem(str(proyecto.get('idiomas_requeridos', ''))))
+        tabla.setItem(fila, 6, QTableWidgetItem(str(proyecto.get('habilidades_requeridas', ''))))
+        tabla.setItem(fila, 7, QTableWidgetItem(str(proyecto.get('salario_minimo', ''))))
 
     # Hacer que la tabla sea editable y expandible
      tabla.resizeColumnsToContents()
