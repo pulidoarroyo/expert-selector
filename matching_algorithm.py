@@ -125,5 +125,5 @@ class MatchingAlgorithm:
         return coincidencias
 
     def obtener_mejores_coincidencias(self, coincidencias, limite=10):
-        """Return top N matches"""
+        """Devuelve las mejores coincidencias hasta el límite especificado"""
         return coincidencias[:limite]

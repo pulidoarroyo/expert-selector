@@ -5,52 +5,58 @@ import random
 class DatabaseManager:
     def __init__(self, db_path='expert_selector.db'):
         """Inicializa conexión con la db y crea tablas"""
-        self.conn = sqlite3.connect(db_path)
-        self.cursor = self.conn.cursor()
-        self.crear_tablas()
+        try:
+            self.conn = sqlite3.connect(db_path)
+            self.cursor = self.conn.cursor()
+            self.crear_tablas()
+        except sqlite3.Error as e:
+            print(f"Error al conectar con la base de datos: {e}")
 
     def crear_tablas(self):
         """Crea tablas si no existen"""
-        # Tabla de candidatos
-        self.cursor.execute('''
-        CREATE TABLE IF NOT EXISTS candidatos (
-            id INTEGER PRIMARY KEY,
-            nombre TEXT,
-            apellido TEXT,
-            idiomas TEXT,
-            habilidades TEXT,
-            preferencia_salarial TEXT,
-            ubicacion TEXT
-        )
-        ''')
+        try:
+            # Tabla de candidatos
+            self.cursor.execute('''
+            CREATE TABLE IF NOT EXISTS candidatos (
+                id INTEGER PRIMARY KEY,
+                nombre TEXT,
+                apellido TEXT,
+                idiomas TEXT,
+                habilidades TEXT,
+                preferencia_salarial TEXT,
+                ubicacion TEXT
+            )
+            ''')
 
-        # Tabla de proyectos
-        self.cursor.execute('''
-        CREATE TABLE IF NOT EXISTS proyectos (
-            id INTEGER PRIMARY KEY,
-            nombre_empresa TEXT,
-            nombre_proyecto TEXT,
-            descripcion TEXT,
-            ubicacion TEXT,
-            idiomas_requeridos TEXT,
-            habilidades_requeridas TEXT,
-            salario_minimo TEXT
-        )
-        ''')
+            # Tabla de proyectos
+            self.cursor.execute('''
+            CREATE TABLE IF NOT EXISTS proyectos (
+                id INTEGER PRIMARY KEY,
+                nombre_empresa TEXT,
+                nombre_proyecto TEXT,
+                descripcion TEXT,
+                ubicacion TEXT,
+                idiomas_requeridos TEXT,
+                habilidades_requeridas TEXT,
+                salario_minimo TEXT
+            )
+            ''')
 
-        # Tabla de coincidencias con la estructura corregida
-        self.cursor.execute('''
-        CREATE TABLE IF NOT EXISTS coincidencias (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            proyecto_id INTEGER,
-            candidato_id INTEGER,
-            porcentaje_coincidencia REAL,
-            detalles TEXT,
-            FOREIGN KEY(proyecto_id) REFERENCES proyectos(id),
-            FOREIGN KEY(candidato_id) REFERENCES candidatos(id)
-        )
-        ''')
-        self.conn.commit()
+            # Tabla de coincidencias con la estructura corregida
+            self.cursor.execute('''
+            CREATE TABLE IF NOT EXISTS coincidencias (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                proyecto_id INTEGER,
+                candidato_id INTEGER,
+                porcentaje_coincidencia REAL,
+                detalles TEXT,
+                FOREIGN KEY(proyecto_id) REFERENCES proyectos(id),
+                FOREIGN KEY(candidato_id) REFERENCES candidatos(id)
+            )
+            ''')
+            self.conn.commit()
+        except sqlite3.Error as e:
+            print(f"Error al crear las tablas: {e}")
 
     def generar_id(self):
             """Genera un ID único de 6 dígitos"""

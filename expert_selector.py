@@ -2,7 +2,7 @@ from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, 
     QLabel, QLineEdit, QComboBox, QPushButton, QStackedWidget, 
     QTableWidget, QTableWidgetItem, QFormLayout, QCheckBox, QDialog, 
-    QMessageBox, QTextEdit, QScrollArea, QFrame, QTabWidget, QGridLayout
+    QMessageBox, QTextEdit, QScrollArea, QFrame, QTabWidget, QGridLayout, QHeaderView
 )
 from PyQt5.QtCore import Qt, QSize
 from PyQt5.QtGui import QFont, QPalette, QColor, QIcon
@@ -242,7 +242,7 @@ class ExpertSelector(QMainWindow):
 
         main_layout = QVBoxLayout(dialog)
 
-    # Añadir barra de búsqueda
+        # Añadir barra de búsqueda
         search_container = QWidget()
         search_layout = QHBoxLayout(search_container)
         search_bar = QLineEdit()
@@ -252,16 +252,14 @@ class ExpertSelector(QMainWindow):
         search_layout.addStretch()
         main_layout.addWidget(search_container)
   
-    # Configurar tabla
+        # Configurar tabla
         tabla = QTableWidget()
-        tabla.setColumnCount(7)  
+        tabla.setColumnCount(4)  
         tabla.setHorizontalHeaderLabels([
-        "ID","Nombre", "Apellido", 
-        "Idiomas", "Habilidades", "Salario", 
-        "Ubicación"
-    ])
+            "ID", "Nombre", "Apellido", "Ubicación"
+        ])
 
-    # Estilo para la tabla
+        # Estilo para la tabla
         tabla.setAlternatingRowColors(True)
         tabla.setSelectionBehavior(QTableWidget.SelectRows)
         tabla.setSelectionMode(QTableWidget.SingleSelection)
@@ -269,31 +267,22 @@ class ExpertSelector(QMainWindow):
         tabla.horizontalHeader().setStretchLastSection(True)
         tabla.setShowGrid(False)
 
-    # Obtener y mostrar candidatos
+        # Obtener y mostrar candidatos
         candidatos = self.db_manager.listar_candidatos()
         tabla.setRowCount(len(candidatos))
         for fila, candidato in enumerate(candidatos):
-            tabla.setItem(fila, 0, QTableWidgetItem(str(candidato.get('id', ''))))
-            tabla.setItem(fila, 1, QTableWidgetItem(str(candidato.get('nombre', ''))))
-            tabla.setItem(fila, 2, QTableWidgetItem(str(candidato.get('apellido', ''))))
-            tabla.setItem(fila, 3, QTableWidgetItem(str(candidato.get('idiomas', ''))))
-            tabla.setItem(fila, 4, QTableWidgetItem(str(candidato.get('habilidades', ''))))
-            tabla.setItem(fila, 5, QTableWidgetItem(str(candidato.get('preferencia_salarial', ''))))
-            tabla.setItem(fila, 6, QTableWidgetItem(str(candidato.get('ubicacion', ''))))
+            for col, key in enumerate(["id", "nombre", "apellido", "ubicacion"]):
+                tabla.setItem(fila, col, QTableWidgetItem(str(candidato.get(key, ''))))
 
         tabla.resizeColumnsToContents()
+        tabla.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)  # Ajustar todas las columnas para ocupar el mismo espacio
         tabla.setSortingEnabled(True)
         main_layout.addWidget(tabla)
 
-    # Implementar búsqueda en tiempo real
+        # Implementar búsqueda en tiempo real
         def filtrar_candidatos(text):
             for row in range(tabla.rowCount()):
-                mostrar = False
-                for col in range(tabla.columnCount()):
-                    item = tabla.item(row, col)
-                    if item and text.lower() in item.text().lower():
-                        mostrar = True
-                        break
+                mostrar = any(text.lower() in (tabla.item(row, col).text().lower() if tabla.item(row, col) else '') for col in range(tabla.columnCount()))
                 tabla.setRowHidden(row, not mostrar)
 
         search_bar.textChanged.connect(filtrar_candidatos)
@@ -496,49 +485,49 @@ class ExpertSelector(QMainWindow):
         dialog.setWindowTitle("Lista de Proyectos")
         dialog.setGeometry(300, 300, 1000, 700)
         dialog.setStyleSheet("""
-    QDialog {
-        background-color: #f5f5f5;
-    }
-    QTableWidget {
-        background: white;
-        border: 1px solid #ddd;
-        border-radius: 5px;
-    }
-    QTableWidget::item {
-        padding: 5px;
-    }
-    QTableWidget QHeaderView::section {
-        background: #e0e0e0;
-        padding: 8px;
-        border: none;
-        font-weight: bold;
-    }
-    QTableWidget QHeaderView::section:selected {
-        background: #2196F3;
-        color: white;
-    }
-    QPushButton {
-        background-color: #2196F3;
-        color: white;
-        padding: 10px 20px;
-        border: none;
-        border-radius: 4px;
-    }
-    QPushButton:hover {
-        background-color: #1976D2;
-    }
-    QLineEdit {
-        padding: 8px;
-        border: 1px solid #ddd;
-        border-radius: 4px;
-        background: white;
-        margin-bottom: 10px;
-    }
-    """)
+        QDialog {
+            background-color: #f5f5f5;
+        }
+        QTableWidget {
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        QTableWidget::item {
+            padding: 5px;
+        }
+        QTableWidget QHeaderView::section {
+            background: #e0e0e0;
+            padding: 8px;
+            border: none;
+            font-weight: bold;
+        }
+        QTableWidget QHeaderView::section:selected {
+            background: #2196F3;
+            color: white;
+        }
+        QPushButton {
+            background-color: #2196F3;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+        }
+        QPushButton:hover {
+            background-color: #1976D2;
+        }
+        QLineEdit {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background: white;
+            margin-bottom: 10px;
+        }
+        """)
 
         main_layout = QVBoxLayout(dialog)
 
-    # Añadir barra de búsqueda
+        # Añadir barra de búsqueda
         search_container = QWidget()
         search_layout = QHBoxLayout(search_container)
         search_bar = QLineEdit()
@@ -547,15 +536,15 @@ class ExpertSelector(QMainWindow):
         search_layout.addWidget(search_bar)
         search_layout.addStretch()
         main_layout.addWidget(search_container)
-  
-    # Configurar tabla
+
+        # Configurar tabla
         tabla = QTableWidget()
         tabla.setColumnCount(4)
         tabla.setHorizontalHeaderLabels([
-        "ID", "Empresa", "Nombre Proyecto", "Descripción"
-    ])
+            "ID", "Empresa", "Nombre Proyecto", "Descripción"
+        ])
 
-    # Estilo para la tabla
+        # Estilo para la tabla
         tabla.setAlternatingRowColors(True)
         tabla.setSelectionBehavior(QTableWidget.SelectRows)
         tabla.setSelectionMode(QTableWidget.SingleSelection)
@@ -563,28 +552,21 @@ class ExpertSelector(QMainWindow):
         tabla.horizontalHeader().setStretchLastSection(True)
         tabla.setShowGrid(False)
 
-    # Obtener y mostrar proyectos
+        # Obtener y mostrar proyectos
         proyectos = self.db_manager.listar_proyectos()
         tabla.setRowCount(len(proyectos))
         for fila, proyecto in enumerate(proyectos):
-            tabla.setItem(fila, 0, QTableWidgetItem(str(proyecto.get('id', ''))))
-            tabla.setItem(fila, 1, QTableWidgetItem(str(proyecto.get('nombre_empresa', ''))))
-            tabla.setItem(fila, 2, QTableWidgetItem(str(proyecto.get('nombre_proyecto', ''))))
-            tabla.setItem(fila, 3, QTableWidgetItem(str(proyecto.get('descripcion', ''))))
+            for col, key in enumerate(["id", "nombre_empresa", "nombre_proyecto", "descripcion"]):
+                tabla.setItem(fila, col, QTableWidgetItem(str(proyecto.get(key, ''))))
 
         tabla.resizeColumnsToContents()
         tabla.setSortingEnabled(True)
         main_layout.addWidget(tabla)
 
-    # Implementar búsqueda en tiempo real
+        # Implementar búsqueda en tiempo real
         def filtrar_proyectos(text):
             for row in range(tabla.rowCount()):
-                mostrar = False
-                for col in range(tabla.columnCount()):
-                    item = tabla.item(row, col)
-                    if item and text.lower() in item.text().lower():
-                        mostrar = True
-                        break
+                mostrar = any(text.lower() in (tabla.item(row, col).text().lower() if tabla.item(row, col) else '') for col in range(tabla.columnCount()))
                 tabla.setRowHidden(row, not mostrar)
 
         search_bar.textChanged.connect(filtrar_proyectos)
