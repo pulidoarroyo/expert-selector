@@ -81,15 +81,28 @@ class DatabaseManager:
 
     def obtener_habilidades(self):
         """Devuelve una lista de habilidades predefinidas"""
-        return ['Python', 'JavaScript', 'React', 'SQL', 'Java', 'C++', 'Data Science', 'Machine Learning']
+        return [
+            'Python', 'JavaScript', 'React', 'SQL', 'Java', 'C++', 'C', 'C#', 'Ciencia de datos', 
+            'Machine Learning','HTML', 'Blockchain', 'Cyberseguridad', 'Diseño UI', 'Manejo de proyectos',
+            'Análisis de datos', 'Inteligencia Artificial', 'Desarrollo móvil', 'Desarrollo web',
+            'Bases de datos', 'Administración de sistemas','Big Data', 'Gestión de equipos', 'Automatización'
+        ]
 
     def obtener_salarios(self):
         """Devuelve rangos de salarios predefinidos"""
-        return ['2000-3000', '3000-4000', '4000-5000', '5000-6000', '6000+']
+        return [
+            '2000-3000', '3000-4000', '4000-5000', '5000-6000', '6000-7000', 
+            '7000-8000', '8000-9000', '9000-10000', '10000+'
+        ]
 
     def obtener_paises(self):
-        """Devuelve lista de países de Latinoamérica"""
-        return ['Argentina', 'Brasil', 'Chile', 'Colombia', 'México', 'Perú', 'Uruguay','Venezuela','Estados Unidos']
+        """Devuelve lista de países de Latinoamérica y otros"""
+        return [
+            'Argentina', 'Brasil', 'Chile', 'Colombia', 'México', 'Perú', 'Uruguay', 
+            'Venezuela', 'Estados Unidos', 'Canadá', 'España', 'Portugal', 'Alemania', 
+            'Francia', 'Reino Unido', 'Italia', 'Australia', 'Nueva Zelanda', 'India', 
+            'China', 'Japón', 'Corea del Sur', 'Sudáfrica'
+        ]
 
     def guardar_candidato(self, candidato):
         """Guarda un nuevo candidato en la base de datos"""
