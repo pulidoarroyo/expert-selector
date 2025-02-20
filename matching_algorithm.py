@@ -48,7 +48,7 @@ class MatchingAlgorithm:
         return 0.5  # Trabajar de forma remota es posible pero no ideal
         
     def calcular_match_salario(self, salario_minimo_proyecto, preferencia_salarial_candidato):
-        """Calculate salary match"""
+        """Calcula coincidencia de salario basada en preferencias del candidato"""
         if not salario_minimo_proyecto or not preferencia_salarial_candidato:
             return 0
             
@@ -72,7 +72,7 @@ class MatchingAlgorithm:
         return max(0, min(1, ratio))
         
     def generar_coincidencias(self, proyecto, candidatos):
-        """Generate matches between a project and candidates"""
+        """Genera coincidencias para un proyecto y una lista de candidatos"""
         coincidencias = []
         
         for candidato in candidatos:

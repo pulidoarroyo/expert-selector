@@ -288,197 +288,6 @@ class ExpertSelector(QMainWindow):
         search_bar.textChanged.connect(filtrar_candidatos)
 
         dialog.exec_()
-     
-    def actualizar_candidato(self, candidato):
-    # Diálogo para actualizar candidato
-        dialog = QDialog(self)
-        dialog.setWindowTitle("Actualizar Candidato")
-        dialog.setGeometry(250, 250, 500, 600)
-
-        layout = QFormLayout()
-
-    # Campos del formulario pre-poblados
-        nombre = QLineEdit(candidato['nombre'])
-        apellido = QLineEdit(candidato['apellido'])
-
-    # Idiomas (múltiple selección)
-        idiomas = QWidget()
-        idiomas_layout = QVBoxLayout()
-        idiomas_checks = []
-        candidato_idiomas = candidato['idiomas'] if isinstance(candidato['idiomas'], list) else eval(candidato['idiomas'])
-        for idioma in self.db_manager.obtener_idiomas():
-            check = QCheckBox(idioma)
-            check.setChecked(idioma in candidato_idiomas)
-            idiomas_layout.addWidget(check)
-            idiomas_checks.append(check)
-        idiomas.setLayout(idiomas_layout)
-
-    # Habilidades (múltiple selección)
-        habilidades = QWidget()
-        habilidades_layout = QVBoxLayout()
-        habilidades_checks = []
-        candidato_habilidades = candidato['habilidades'] if isinstance(candidato['habilidades'], list) else eval(candidato['habilidades'])
-        for habilidad in self.db_manager.obtener_habilidades():
-            check = QCheckBox(habilidad)
-            check.setChecked(habilidad in candidato_habilidades)
-            habilidades_layout.addWidget(check)
-            habilidades_checks.append(check)
-        habilidades.setLayout(habilidades_layout)
-
-    # Preferencia salarial
-        salario = QComboBox()
-        salario.addItems(self.db_manager.obtener_salarios())
-        salario.setCurrentText(str(candidato['preferencia_salarial']))
-
-    # Ubicación
-        ubicacion = QComboBox()
-        ubicacion.addItems(self.db_manager.obtener_paises())
-        ubicacion.setCurrentText(candidato['ubicacion'])
-
-    # Botón actualizar
-        btn_actualizar = QPushButton("Actualizar Candidato")
-        btn_actualizar.clicked.connect(lambda: self.guardar_actualizacion_candidato(
-            candidato['id'],
-            nombre.text(), 
-            apellido.text(), 
-            [check.text() for check in idiomas_checks if check.isChecked()],
-            [check.text() for check in habilidades_checks if check.isChecked()],
-            salario.currentText(), 
-            ubicacion.currentText(),
-            dialog
-        ))
-
-    # Agregar al layout
-        layout.addRow("Nombre:", nombre)
-        layout.addRow("Apellido:", apellido)
-        layout.addRow("Idiomas:", idiomas)
-        layout.addRow("Habilidades:", habilidades)
-        layout.addRow("Preferencia Salarial:", salario)
-        layout.addRow("Ubicación:", ubicacion)
-        layout.addRow(btn_actualizar)
-
-        dialog.setLayout(layout)
-        dialog.exec_()
-
-    def guardar_actualizacion_candidato(self, id_candidato, nombre, apellido, idiomas, habilidades, salario, ubicacion, dialog):
-    # Validar campos obligatorios
-        if not nombre or not apellido:
-           QMessageBox.warning(self, "Error", "Nombre y apellido son obligatorios")
-           return
-
-    # Preparar datos actualizados del candidato
-        candidato_actualizado = {
-            'id': id_candidato,
-            'nombre': nombre,
-            'apellido': apellido,
-            'idiomas': idiomas,
-            'habilidades': habilidades,
-            'salario': salario,
-            'ubicacion': ubicacion
-        }
-
-        try:
-            self.db_manager.actualizar_candidato(candidato_actualizado)
-            QMessageBox.information(self, "Éxito", "Candidato actualizado correctamente.")
-            dialog.accept()
-            self.listar_candidatos()  # Refrescar la lista
-        except Exception as e:
-            QMessageBox.critical(self, "Error", f"No se pudo actualizar el candidato: {str(e)}")
-
-    def actualizar_candidato_por_id(self):
-    # Diálogo para ingresar ID
-        dialog = QDialog(self)
-        dialog.setWindowTitle("Actualizar Candidato por ID")
-        dialog.setGeometry(250, 250, 300, 100)
-    
-        layout = QVBoxLayout()
-    
-     # Campo para ID
-        id_input = QLineEdit()
-        id_input.setPlaceholderText("Ingrese ID del candidato")
-    
-    # Botón buscar
-        btn_buscar = QPushButton("Buscar y Actualizar")
-        btn_buscar.clicked.connect(lambda: self.buscar_y_actualizar_candidato(id_input.text(), dialog))
-    
-        layout.addWidget(QLabel("ID del Candidato:"))
-        layout.addWidget(id_input)
-        layout.addWidget(btn_buscar)
-    
-        dialog.setLayout(layout)
-        dialog.exec_()
- 
-    def buscar_y_actualizar_candidato(self, id_candidato, dialog_previo):
-       try:
-        # Validar que el ID sea un número
-            if not id_candidato.isdigit():
-                QMessageBox.warning(self, "Error", "Por favor ingrese un ID válido")
-                return
-            
-        # Buscar candidato por ID
-            candidato = self.db_manager.obtener_candidato_por_id(int(id_candidato))
-        
-            if candidato:
-                dialog_previo.accept()  # Cerrar diálogo de búsqueda
-                self.actualizar_candidato(candidato)  # Usar el método existente
-            else:
-                QMessageBox.warning(self, "Error", "No se encontró un candidato con ese ID")
-            
-       except Exception as e:
-            QMessageBox.critical(self, "Error", f"Error al buscar candidato: {str(e)}")
-    
-    def eliminar_candidato_por_id(self):
-    # Diálogo para ingresar ID
-        dialog = QDialog(self)
-        dialog.setWindowTitle("Eliminar Candidato por ID")
-        dialog.setGeometry(250, 250, 300, 100)
-    
-        layout = QVBoxLayout()
-    
-    # Campo para ID
-        id_input = QLineEdit()
-        id_input.setPlaceholderText("Ingrese ID del candidato")
-    
-    # Botón eliminar
-        btn_eliminar = QPushButton("Buscar y Eliminar")
-        btn_eliminar.clicked.connect(lambda: self.buscar_y_eliminar_candidato(id_input.text(), dialog))
-    
-        layout.addWidget(QLabel("ID del Candidato:"))
-        layout.addWidget(id_input)
-        layout.addWidget(btn_eliminar)
-    
-        dialog.setLayout(layout)
-        dialog.exec_()
-
-    def buscar_y_eliminar_candidato(self, id_candidato, dialog):
-        try:
-        # Validar que el ID sea un número
-            if not id_candidato.isdigit():
-                QMessageBox.warning(self, "Error", "Por favor ingrese un ID válido")
-                return
-            
-        # Buscar candidato por ID
-            candidato = self.db_manager.obtener_candidato_por_id(int(id_candidato))
-        
-            if candidato:
-            # Confirmar eliminación
-                confirmacion = QMessageBox.question(
-                    self,
-                    "Confirmar Eliminación",
-                    f"¿Está seguro de que desea eliminar al candidato {candidato['nombre']} {candidato['apellido']}?",
-                    QMessageBox.Yes | QMessageBox.No,
-                    QMessageBox.No
-                )
-            
-                if confirmacion == QMessageBox.Yes:
-                    self.db_manager.eliminar_candidato(candidato['id'])
-                    QMessageBox.information(self, "Éxito", "Candidato eliminado correctamente")
-                    dialog.accept()
-            else:
-                QMessageBox.warning(self, "Error", "No se encontró un candidato con ese ID")
-            
-        except Exception as e:
-            QMessageBox.critical(self, "Error", f"Error al eliminar candidato: {str(e)}")
 
     def listar_proyectos(self):
         dialog = QDialog(self)
@@ -572,199 +381,7 @@ class ExpertSelector(QMainWindow):
         search_bar.textChanged.connect(filtrar_proyectos)
 
         dialog.exec_()
-        
-    def actualizar_proyecto_por_id(self):
-        """Diálogo para actualizar un proyecto existente"""
-        dialog = QDialog(self)
-        dialog.setWindowTitle("Actualizar Proyecto por ID")
-        dialog.setGeometry(250, 250, 300, 100)
     
-        layout = QVBoxLayout()
-    
-    # Campo para ID
-        id_input = QLineEdit()
-        id_input.setPlaceholderText("Ingrese ID del proyecto")
-    
-    # Botón buscar
-        btn_buscar = QPushButton("Buscar y Actualizar")
-        btn_buscar.clicked.connect(lambda: self.buscar_y_actualizar_proyecto(id_input.text(), dialog))
-    
-        layout.addWidget(QLabel("ID del Proyecto:"))
-        layout.addWidget(id_input)
-        layout.addWidget(btn_buscar)
-    
-        dialog.setLayout(layout)
-        dialog.exec_()
-
-    def buscar_y_actualizar_proyecto(self, id_proyecto, dialog_previo):
-        try:
-            if not id_proyecto.isdigit():
-                QMessageBox.warning(self, "Error", "Por favor ingrese un ID válido")
-                return
-            
-            proyecto = self.db_manager.obtener_proyecto_por_id(int(id_proyecto))
-        
-            if proyecto:
-                dialog_previo.accept()
-                self.actualizar_proyecto(proyecto)
-            else:
-                QMessageBox.warning(self, "Error", "No se encontró un proyecto con ese ID")
-            
-        except Exception as e:
-            QMessageBox.critical(self, "Error", f"Error al buscar proyecto: {str(e)}")
-
-    def actualizar_proyecto(self, proyecto):
-        """Diálogo para actualizar los datos del proyecto"""
-        dialog = QDialog(self)
-        dialog.setWindowTitle("Actualizar Proyecto")
-        dialog.setGeometry(250, 250, 600, 700)
-
-        layout = QFormLayout()
-
-    # Campos del formulario pre-poblados
-        nombre_empresa = QLineEdit(proyecto['nombre_empresa'])
-        nombre_proyecto = QLineEdit(proyecto['nombre_proyecto'])
-        descripcion = QTextEdit()
-        descripcion.setText(proyecto['descripcion'])
-
-    # Ubicación
-        ubicacion = QComboBox()
-        ubicacion.addItems(self.db_manager.obtener_paises())
-        ubicacion.setCurrentText(proyecto['ubicacion'])
-
-    # Idiomas requeridos
-        idiomas = QWidget()
-        idiomas_layout = QVBoxLayout()
-        idiomas_checks = []
-        for idioma in self.db_manager.obtener_idiomas():
-            check = QCheckBox(idioma)
-            check.setChecked(idioma in proyecto['idiomas_requeridos'])
-            idiomas_layout.addWidget(check)
-            idiomas_checks.append(check)
-        idiomas.setLayout(idiomas_layout)
-
-    # Habilidades requeridas
-        habilidades = QWidget()
-        habilidades_layout = QVBoxLayout()
-        habilidades_checks = []
-        for habilidad in self.db_manager.obtener_habilidades():
-            check = QCheckBox(habilidad)
-            check.setChecked(habilidad in proyecto['habilidades_requeridas'])
-            habilidades_layout.addWidget(check)
-            habilidades_checks.append(check)
-        habilidades.setLayout(habilidades_layout)
-
-    # Salario mínimo
-        salario_minimo = QComboBox()
-        salario_minimo.addItems(self.db_manager.obtener_salarios())
-        salario_minimo.setCurrentText(proyecto['salario_minimo'])
-
-    # Botón actualizar
-        btn_actualizar = QPushButton("Actualizar Proyecto")
-        btn_actualizar.clicked.connect(lambda: self.guardar_actualizacion_proyecto(
-            proyecto['id'],
-            nombre_empresa.text(),
-            nombre_proyecto.text(),
-            descripcion.toPlainText(),
-            ubicacion.currentText(),
-            [check.text() for check in idiomas_checks if check.isChecked()],
-            [check.text() for check in habilidades_checks if check.isChecked()],
-            salario_minimo.currentText(),
-            dialog
-        ))
-    
-    # Agregar al layout
-        layout.addRow("Nombre de la Empresa:", nombre_empresa)
-        layout.addRow("Nombre del Proyecto:", nombre_proyecto)
-        layout.addRow("Descripción:", descripcion)
-        layout.addRow("Ubicación:", ubicacion)
-        layout.addRow("Idiomas Requeridos:", idiomas)
-        layout.addRow("Habilidades Requeridas:", habilidades)
-        layout.addRow("Salario Mínimo:", salario_minimo)
-        layout.addRow(btn_actualizar)
-
-        dialog.setLayout(layout)
-        dialog.exec_()
-
-    def guardar_actualizacion_proyecto(self, id_proyecto, nombre_empresa, nombre_proyecto, 
-                                     descripcion, ubicacion, idiomas_requeridos, 
-                                     habilidades_requeridas, salario_minimo, dialog):
-        """Guarda la actualización de un proyecto"""
-        if not nombre_empresa or not nombre_proyecto:
-            QMessageBox.warning(self, "Error", "Nombre de empresa y proyecto son obligatorios")
-            return
-   
-        proyecto_actualizado = {
-            'id': id_proyecto,
-            'nombre_empresa': nombre_empresa,
-            'nombre_proyecto': nombre_proyecto,
-            'descripcion': descripcion,
-            'ubicacion': ubicacion,
-            'idiomas_requeridos': idiomas_requeridos,
-            'habilidades_requeridas': habilidades_requeridas,
-            'salario_minimo': salario_minimo
-        }
-
-        try:
-            self.db_manager.actualizar_proyecto(proyecto_actualizado)
-            QMessageBox.information(self, "Éxito", "Proyecto actualizado correctamente.")
-            dialog.accept()
-            self.listar_proyectos()
-        except Exception as e:
-            QMessageBox.critical(self, "Error", f"No se pudo actualizar el proyecto: {str(e)}")
-
-    def eliminar_proyecto_por_id(self):
-        """Diálogo para eliminar un proyecto"""
-        dialog = QDialog(self)
-        dialog.setWindowTitle("Eliminar Proyecto por ID")
-        dialog.setGeometry(250, 250, 300, 100)
-      
-        layout = QVBoxLayout()
-    
-    # Campo para ID
-        id_input = QLineEdit()
-        id_input.setPlaceholderText("Ingrese ID del proyecto")
-    
-    # Botón eliminar
-        btn_eliminar = QPushButton("Buscar y Eliminar")
-        btn_eliminar.clicked.connect(lambda: self.buscar_y_eliminar_proyecto(id_input.text(), dialog))
-      
-        layout.addWidget(QLabel("ID del Proyecto:"))
-        layout.addWidget(id_input)
-        layout.addWidget(btn_eliminar)
-    
-        dialog.setLayout(layout)
-        dialog.exec_()
-
-    def buscar_y_eliminar_proyecto(self, id_proyecto, dialog):
-        """Busca y elimina un proyecto específico"""
-        try:
-            if not id_proyecto.isdigit():
-                QMessageBox.warning(self, "Error", "Por favor ingrese un ID válido")
-                return
-            
-            proyecto = self.db_manager.obtener_proyecto_por_id(int(id_proyecto))
-        
-            if proyecto:
-                confirmacion = QMessageBox.question(
-                    self,
-                    "Confirmar Eliminación",
-                    f"¿Está seguro de que desea eliminar el proyecto {proyecto['nombre_proyecto']} de la empresa {proyecto['nombre_empresa']} ?\n"
-                    "Esta acción también eliminará todas las coincidencias asociadas.",
-                    QMessageBox.Yes | QMessageBox.No,
-                    QMessageBox.No
-                )
-                
-                if confirmacion == QMessageBox.Yes:
-                    self.db_manager.eliminar_proyecto(proyecto['id'])
-                    QMessageBox.information(self, "Éxito", "Proyecto eliminado correctamente")
-                    dialog.accept()
-            else:
-                   QMessageBox.warning(self, "Error", "No se encontró un proyecto con ese ID")
-            
-        except Exception as e:
-            QMessageBox.critical(self, "Error", f"Error al eliminar proyecto: {str(e)}")
-
     def agregar_candidato(self):
         dialog = QDialog(self)
         dialog.setWindowTitle("Agregar Candidato")
@@ -923,31 +540,7 @@ class ExpertSelector(QMainWindow):
         search_habilidades.textChanged.connect(filtrar_habilidades)
 
         dialog.exec_()
-
-    def guardar_candidato(self, nombre, apellido, idiomas, habilidades, salario, ubicacion, dialog):
-    # Validar campos obligatorios
-      if not nombre or not apellido:
-        QMessageBox.warning(self, "Error", "Nombre y apellido son obligatorios")
-        return
-
-    # Preparar datos del candidato
-      candidato = {
-        'nombre': nombre,
-        'apellido': apellido,
-        'idiomas': idiomas,
-        'habilidades': habilidades,
-        'salario': salario,
-        'ubicacion': ubicacion
-    }
-
-    # Guardar candidato en base de datos
-      try:
-        self.db_manager.guardar_candidato(candidato)
-        QMessageBox.information(self, "Éxito", "Candidato guardado correctamente.")
-        dialog.accept()
-      except Exception as e:
-        QMessageBox.critical(self, "Error", f"No se pudo guardar el candidato: {str(e)}")
-
+        
     def agregar_proyecto(self):
         """Diálogo para agregar un nuevo proyecto"""
         dialog = QDialog(self)
@@ -1131,7 +724,41 @@ class ExpertSelector(QMainWindow):
         
         search_habilidades.textChanged.connect(filtrar_habilidades)
 
-        dialog.exec_()
+        dialog.exec_()        
+
+    def guardar_candidato(self, nombre, apellido, idiomas, habilidades, salario, ubicacion, dialog):
+        
+    # Validar campos obligatorios
+      if not nombre or not apellido:
+            QMessageBox.warning(self, "Error", "Nombre y apellido son obligatorios")
+            return
+
+    # Validar que nombre y apellido solo contengan letras
+      if not nombre.isalpha() or not apellido.isalpha():
+            QMessageBox.warning(self, "Error", "Nombre y apellido solo deben contener letras")
+            return
+    
+      if not idiomas or not habilidades:
+            QMessageBox.warning(self, "Error", "Debe seleccionar al menos un idioma y una habilidad")
+            return
+    
+    # Preparar datos del candidato
+      candidato = {
+        'nombre': nombre,
+        'apellido': apellido,
+        'idiomas': idiomas,
+        'habilidades': habilidades,
+        'salario': salario,
+        'ubicacion': ubicacion
+    }
+
+    # Guardar candidato en base de datos
+      try:
+        self.db_manager.guardar_candidato(candidato)
+        QMessageBox.information(self, "Éxito", "Candidato guardado correctamente.")
+        dialog.accept()
+      except Exception as e:
+        QMessageBox.critical(self, "Error", f"No se pudo guardar el candidato: {str(e)}")
 
     def guardar_proyecto(self, 
                         nombre_empresa, 
@@ -1144,8 +771,12 @@ class ExpertSelector(QMainWindow):
                         dialog):
         """Guarda el proyecto en la base de datos"""
     # Validar campos obligatorios
-        if not nombre_empresa or not nombre_proyecto:
-            QMessageBox.warning(self, "Error", "Nombre de empresa y proyecto son obligatorios")
+        if not nombre_empresa or not nombre_proyecto or not descripcion:
+            QMessageBox.warning(self, "Error", "Nombre de empresa, proyecto y descripción son obligatorios")
+            return
+
+        if not idiomas_requeridos or not habilidades_requeridas:
+            QMessageBox.warning(self, "Error", "Debe seleccionar requerimientos")
             return
 
     # Preparar datos del proyecto
@@ -1171,6 +802,389 @@ class ExpertSelector(QMainWindow):
         
         except Exception as e:
             QMessageBox.critical(self, "Error", f"No se pudo guardar el proyecto: {str(e)}")
+
+    def actualizar_candidato(self, candidato):
+    # Diálogo para actualizar candidato
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Actualizar Candidato")
+        dialog.setGeometry(250, 250, 500, 600)
+
+        layout = QFormLayout()
+
+    # Campos del formulario pre-poblados
+        nombre = QLineEdit(candidato['nombre'])
+        apellido = QLineEdit(candidato['apellido'])
+
+    # Idiomas (múltiple selección)
+        idiomas = QWidget()
+        idiomas_layout = QVBoxLayout()
+        idiomas_checks = []
+        candidato_idiomas = candidato['idiomas'] if isinstance(candidato['idiomas'], list) else eval(candidato['idiomas'])
+        for idioma in self.db_manager.obtener_idiomas():
+            check = QCheckBox(idioma)
+            check.setChecked(idioma in candidato_idiomas)
+            idiomas_layout.addWidget(check)
+            idiomas_checks.append(check)
+        idiomas.setLayout(idiomas_layout)
+
+    # Habilidades (múltiple selección)
+        habilidades = QWidget()
+        habilidades_layout = QVBoxLayout()
+        habilidades_checks = []
+        candidato_habilidades = candidato['habilidades'] if isinstance(candidato['habilidades'], list) else eval(candidato['habilidades'])
+        for habilidad in self.db_manager.obtener_habilidades():
+            check = QCheckBox(habilidad)
+            check.setChecked(habilidad in candidato_habilidades)
+            habilidades_layout.addWidget(check)
+            habilidades_checks.append(check)
+        habilidades.setLayout(habilidades_layout)
+
+    # Preferencia salarial
+        salario = QComboBox()
+        salario.addItems(self.db_manager.obtener_salarios())
+        salario.setCurrentText(str(candidato['preferencia_salarial']))
+
+    # Ubicación
+        ubicacion = QComboBox()
+        ubicacion.addItems(self.db_manager.obtener_paises())
+        ubicacion.setCurrentText(candidato['ubicacion'])
+
+    # Botón actualizar
+        btn_actualizar = QPushButton("Actualizar Candidato")
+        btn_actualizar.clicked.connect(lambda: self.guardar_actualizacion_candidato(
+            candidato['id'],
+            nombre.text(), 
+            apellido.text(), 
+            [check.text() for check in idiomas_checks if check.isChecked()],
+            [check.text() for check in habilidades_checks if check.isChecked()],
+            salario.currentText(), 
+            ubicacion.currentText(),
+            dialog
+        ))
+
+    # Agregar al layout
+        layout.addRow("Nombre:", nombre)
+        layout.addRow("Apellido:", apellido)
+        layout.addRow("Idiomas:", idiomas)
+        layout.addRow("Habilidades:", habilidades)
+        layout.addRow("Preferencia Salarial:", salario)
+        layout.addRow("Ubicación:", ubicacion)
+        layout.addRow(btn_actualizar)
+
+        dialog.setLayout(layout)
+        dialog.exec_()
+
+    def actualizar_proyecto(self, proyecto):
+        """Diálogo para actualizar los datos del proyecto"""
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Actualizar Proyecto")
+        dialog.setGeometry(250, 250, 600, 700)
+
+        layout = QFormLayout()
+
+    # Campos del formulario pre-poblados
+        nombre_empresa = QLineEdit(proyecto['nombre_empresa'])
+        nombre_proyecto = QLineEdit(proyecto['nombre_proyecto'])
+        descripcion = QTextEdit()
+        descripcion.setText(proyecto['descripcion'])
+
+    # Ubicación
+        ubicacion = QComboBox()
+        ubicacion.addItems(self.db_manager.obtener_paises())
+        ubicacion.setCurrentText(proyecto['ubicacion'])
+
+    # Idiomas requeridos
+        idiomas = QWidget()
+        idiomas_layout = QVBoxLayout()
+        idiomas_checks = []
+        for idioma in self.db_manager.obtener_idiomas():
+            check = QCheckBox(idioma)
+            check.setChecked(idioma in proyecto['idiomas_requeridos'])
+            idiomas_layout.addWidget(check)
+            idiomas_checks.append(check)
+        idiomas.setLayout(idiomas_layout)
+
+    # Habilidades requeridas
+        habilidades = QWidget()
+        habilidades_layout = QVBoxLayout()
+        habilidades_checks = []
+        for habilidad in self.db_manager.obtener_habilidades():
+            check = QCheckBox(habilidad)
+            check.setChecked(habilidad in proyecto['habilidades_requeridas'])
+            habilidades_layout.addWidget(check)
+            habilidades_checks.append(check)
+        habilidades.setLayout(habilidades_layout)
+
+    # Salario mínimo
+        salario_minimo = QComboBox()
+        salario_minimo.addItems(self.db_manager.obtener_salarios())
+        salario_minimo.setCurrentText(proyecto['salario_minimo'])
+
+    # Botón actualizar
+        btn_actualizar = QPushButton("Actualizar Proyecto")
+        btn_actualizar.clicked.connect(lambda: self.guardar_actualizacion_proyecto(
+            proyecto['id'],
+            nombre_empresa.text(),
+            nombre_proyecto.text(),
+            descripcion.toPlainText(),
+            ubicacion.currentText(),
+            [check.text() for check in idiomas_checks if check.isChecked()],
+            [check.text() for check in habilidades_checks if check.isChecked()],
+            salario_minimo.currentText(),
+            dialog
+        ))
+    
+    # Agregar al layout
+        layout.addRow("Nombre de la Empresa:", nombre_empresa)
+        layout.addRow("Nombre del Proyecto:", nombre_proyecto)
+        layout.addRow("Descripción:", descripcion)
+        layout.addRow("Ubicación:", ubicacion)
+        layout.addRow("Idiomas Requeridos:", idiomas)
+        layout.addRow("Habilidades Requeridas:", habilidades)
+        layout.addRow("Salario Mínimo:", salario_minimo)
+        layout.addRow(btn_actualizar)
+
+        dialog.setLayout(layout)
+        dialog.exec_()
+
+    def guardar_actualizacion_candidato(self, id_candidato, nombre, apellido, idiomas, habilidades, salario, ubicacion, dialog):
+    # Validar campos obligatorios
+        if not nombre or not apellido:
+           QMessageBox.warning(self, "Error", "Nombre y apellido son obligatorios")
+           return
+
+    # Preparar datos actualizados del candidato
+        candidato_actualizado = {
+            'id': id_candidato,
+            'nombre': nombre,
+            'apellido': apellido,
+            'idiomas': idiomas,
+            'habilidades': habilidades,
+            'salario': salario,
+            'ubicacion': ubicacion
+        }
+
+        try:
+            self.db_manager.actualizar_candidato(candidato_actualizado)
+            QMessageBox.information(self, "Éxito", "Candidato actualizado correctamente.")
+            dialog.accept()
+            self.listar_candidatos()  # Refrescar la lista
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"No se pudo actualizar el candidato: {str(e)}")
+
+    def guardar_actualizacion_proyecto(self, id_proyecto, nombre_empresa, nombre_proyecto, 
+                                     descripcion, ubicacion, idiomas_requeridos, 
+                                     habilidades_requeridas, salario_minimo, dialog):
+        """Guarda la actualización de un proyecto"""
+        if not nombre_empresa or not nombre_proyecto:
+            QMessageBox.warning(self, "Error", "Nombre de empresa y proyecto son obligatorios")
+            return
+   
+        proyecto_actualizado = {
+            'id': id_proyecto,
+            'nombre_empresa': nombre_empresa,
+            'nombre_proyecto': nombre_proyecto,
+            'descripcion': descripcion,
+            'ubicacion': ubicacion,
+            'idiomas_requeridos': idiomas_requeridos,
+            'habilidades_requeridas': habilidades_requeridas,
+            'salario_minimo': salario_minimo
+        }
+
+        try:
+            self.db_manager.actualizar_proyecto(proyecto_actualizado)
+            QMessageBox.information(self, "Éxito", "Proyecto actualizado correctamente.")
+            dialog.accept()
+            self.listar_proyectos()
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"No se pudo actualizar el proyecto: {str(e)}")
+
+    def actualizar_candidato_por_id(self):
+    # Diálogo para ingresar ID
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Actualizar Candidato por ID")
+        dialog.setGeometry(250, 250, 300, 100)
+    
+        layout = QVBoxLayout()
+    
+     # Campo para ID
+        id_input = QLineEdit()
+        id_input.setPlaceholderText("Ingrese ID del candidato")
+    
+    # Botón buscar
+        btn_buscar = QPushButton("Buscar y Actualizar")
+        btn_buscar.clicked.connect(lambda: self.buscar_y_actualizar_candidato(id_input.text(), dialog))
+    
+        layout.addWidget(QLabel("ID del Candidato:"))
+        layout.addWidget(id_input)
+        layout.addWidget(btn_buscar)
+    
+        dialog.setLayout(layout)
+        dialog.exec_()
+ 
+    def actualizar_proyecto_por_id(self):
+        """Diálogo para actualizar un proyecto existente"""
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Actualizar Proyecto por ID")
+        dialog.setGeometry(250, 250, 300, 100)
+    
+        layout = QVBoxLayout()
+    
+    # Campo para ID
+        id_input = QLineEdit()
+        id_input.setPlaceholderText("Ingrese ID del proyecto")
+    
+    # Botón buscar
+        btn_buscar = QPushButton("Buscar y Actualizar")
+        btn_buscar.clicked.connect(lambda: self.buscar_y_actualizar_proyecto(id_input.text(), dialog))
+    
+        layout.addWidget(QLabel("ID del Proyecto:"))
+        layout.addWidget(id_input)
+        layout.addWidget(btn_buscar)
+    
+        dialog.setLayout(layout)
+        dialog.exec_()
+ 
+    def buscar_y_actualizar_candidato(self, id_candidato, dialog_previo):
+       try:
+        # Validar que el ID sea un número
+            if not id_candidato.isdigit():
+                QMessageBox.warning(self, "Error", "Por favor ingrese un ID válido")
+                return
+            
+        # Buscar candidato por ID
+            candidato = self.db_manager.obtener_candidato_por_id(int(id_candidato))
+        
+            if candidato:
+                dialog_previo.accept()  # Cerrar diálogo de búsqueda
+                self.actualizar_candidato(candidato)  # Usar el método existente
+            else:
+                QMessageBox.warning(self, "Error", "No se encontró un candidato con ese ID")
+            
+       except Exception as e:
+            QMessageBox.critical(self, "Error", f"Error al buscar candidato: {str(e)}")
+    
+    def buscar_y_actualizar_proyecto(self, id_proyecto, dialog_previo):
+        try:
+            if not id_proyecto.isdigit():
+                QMessageBox.warning(self, "Error", "Por favor ingrese un ID válido")
+                return
+            
+            proyecto = self.db_manager.obtener_proyecto_por_id(int(id_proyecto))
+        
+            if proyecto:
+                dialog_previo.accept()
+                self.actualizar_proyecto(proyecto)
+            else:
+                QMessageBox.warning(self, "Error", "No se encontró un proyecto con ese ID")
+            
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Error al buscar proyecto: {str(e)}")
+    
+    def eliminar_candidato_por_id(self):
+    # Diálogo para ingresar ID
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Eliminar Candidato por ID")
+        dialog.setGeometry(250, 250, 300, 100)
+    
+        layout = QVBoxLayout()
+    
+    # Campo para ID
+        id_input = QLineEdit()
+        id_input.setPlaceholderText("Ingrese ID del candidato")
+    
+    # Botón eliminar
+        btn_eliminar = QPushButton("Buscar y Eliminar")
+        btn_eliminar.clicked.connect(lambda: self.buscar_y_eliminar_candidato(id_input.text(), dialog))
+    
+        layout.addWidget(QLabel("ID del Candidato:"))
+        layout.addWidget(id_input)
+        layout.addWidget(btn_eliminar)
+    
+        dialog.setLayout(layout)
+        dialog.exec_()
+
+    def eliminar_proyecto_por_id(self):
+        """Diálogo para eliminar un proyecto"""
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Eliminar Proyecto por ID")
+        dialog.setGeometry(250, 250, 300, 100)
+      
+        layout = QVBoxLayout()
+    
+    # Campo para ID
+        id_input = QLineEdit()
+        id_input.setPlaceholderText("Ingrese ID del proyecto")
+    
+    # Botón eliminar
+        btn_eliminar = QPushButton("Buscar y Eliminar")
+        btn_eliminar.clicked.connect(lambda: self.buscar_y_eliminar_proyecto(id_input.text(), dialog))
+      
+        layout.addWidget(QLabel("ID del Proyecto:"))
+        layout.addWidget(id_input)
+        layout.addWidget(btn_eliminar)
+    
+        dialog.setLayout(layout)
+        dialog.exec_()
+
+    def buscar_y_eliminar_candidato(self, id_candidato, dialog):
+        try:
+        # Validar que el ID sea un número
+            if not id_candidato.isdigit():
+                QMessageBox.warning(self, "Error", "Por favor ingrese un ID válido")
+                return
+            
+        # Buscar candidato por ID
+            candidato = self.db_manager.obtener_candidato_por_id(int(id_candidato))
+        
+            if candidato:
+            # Confirmar eliminación
+                confirmacion = QMessageBox.question(
+                    self,
+                    "Confirmar Eliminación",
+                    f"¿Está seguro de que desea eliminar al candidato {candidato['nombre']} {candidato['apellido']}?",
+                    QMessageBox.Yes | QMessageBox.No,
+                    QMessageBox.No
+                )
+            
+                if confirmacion == QMessageBox.Yes:
+                    self.db_manager.eliminar_candidato(candidato['id'])
+                    QMessageBox.information(self, "Éxito", "Candidato eliminado correctamente")
+                    dialog.accept()
+            else:
+                QMessageBox.warning(self, "Error", "No se encontró un candidato con ese ID")
+            
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Error al eliminar candidato: {str(e)}")
+
+    def buscar_y_eliminar_proyecto(self, id_proyecto, dialog):
+        """Busca y elimina un proyecto específico"""
+        try:
+            if not id_proyecto.isdigit():
+                QMessageBox.warning(self, "Error", "Por favor ingrese un ID válido")
+                return
+            
+            proyecto = self.db_manager.obtener_proyecto_por_id(int(id_proyecto))
+        
+            if proyecto:
+                confirmacion = QMessageBox.question(
+                    self,
+                    "Confirmar Eliminación",
+                    f"¿Está seguro de que desea eliminar el proyecto {proyecto['nombre_proyecto']} de la empresa {proyecto['nombre_empresa']} ?\n"
+                    "Esta acción también eliminará todas las coincidencias asociadas.",
+                    QMessageBox.Yes | QMessageBox.No,
+                    QMessageBox.No
+                )
+                
+                if confirmacion == QMessageBox.Yes:
+                    self.db_manager.eliminar_proyecto(proyecto['id'])
+                    QMessageBox.information(self, "Éxito", "Proyecto eliminado correctamente")
+                    dialog.accept()
+            else:
+                   QMessageBox.warning(self, "Error", "No se encontró un proyecto con ese ID")
+            
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Error al eliminar proyecto: {str(e)}")
 
     def crear_seccion_coincidencias(self):
         """Crea la sección de coincidencias"""
