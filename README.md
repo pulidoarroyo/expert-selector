@@ -6,3 +6,4 @@ Mediante un algoritmo inteligente, el sistema evalúa y clasifica a los candidat
 Written in python using PyQt5 and sqlite3 libraries.
 SQLITE is the database engine used for storing data.
 Alejandro Pulido 2024-2025.
+![ExpertSelector](https://github.com/user-attachments/assets/77cb9648-9101-439b-b683-282f26ff1807)
