@@ -4,9 +4,9 @@ class MatchingAlgorithm:
     def __init__(self):
         """Inicializar pesos para diferentes criterios de coincidencia"""
         self.weights = {
-            'idiomas': 0.3,        # 30% de peso para coincidencias de idioma
-            'habilidades': 0.4,    # 40% de peso para coincidencias de habilidades
-            'ubicacion': 0.15,     # 15% de peso para la ubicación
+            'idiomas': 0.15,        # 15% de peso para coincidencias de idioma
+            'habilidades': 0.6,    # 60% de peso para coincidencias de habilidades
+            'ubicacion': 0.10,     # 10% de peso para la ubicación
             'salario': 0.15        # 15% de peso para expectativas salariales
         }
         
