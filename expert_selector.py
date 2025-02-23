@@ -2,13 +2,15 @@ from PyQt5.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, 
     QLabel, QLineEdit, QComboBox, QPushButton, QStackedWidget, 
     QTableWidget, QTableWidgetItem, QFormLayout, QCheckBox, QDialog, 
-    QMessageBox, QTextEdit, QScrollArea, QFrame, QTabWidget, QGridLayout, QHeaderView
+    QMessageBox, QTextEdit, QScrollArea, QFrame, QTabWidget, QGridLayout, QHeaderView, QFileDialog
 )
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QIcon
 from database_manager import DatabaseManager
 from matching_algorithm import MatchingAlgorithm
 from modern_style import ModernStyle
+import pandas as pd
+from datetime import datetime
 
 class ExpertSelector(QMainWindow):
     def __init__(self):
@@ -1517,7 +1519,7 @@ class ExpertSelector(QMainWindow):
         dialog.exec_()
 
     def mostrar_lista_coincidencias(self, id_proyecto, dialog_previo):
-        """Muestra la lista de coincidencias para un proyecto específico"""
+        """Muestra la lista de coincidencias para un proyecto específico y las exporta a Excel"""
         try:
             if not id_proyecto.isdigit():
                 QMessageBox.warning(self, "Error", "Por favor ingrese un ID válido")
@@ -1560,7 +1562,12 @@ class ExpertSelector(QMainWindow):
             tabla.resizeColumnsToContents()
             tabla.setSortingEnabled(True)
 
+            # Crear botón para exportar a Excel
+            btn_exportar = QPushButton("Exportar a Excel")
+            btn_exportar.clicked.connect(lambda: self.exportar_a_excel(coincidencias, id_proyecto))
+            
             layout.addWidget(tabla)
+            layout.addWidget(btn_exportar)
             lista_dialog.setLayout(layout)
             
             dialog_previo.accept()
@@ -1568,3 +1575,41 @@ class ExpertSelector(QMainWindow):
 
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Error al listar coincidencias: {str(e)}")
+
+    def exportar_a_excel(self, coincidencias, id_proyecto):
+        """Exporta las coincidencias a un archivo Excel"""
+        try:
+            # Crear DataFrame con las coincidencias
+            df = pd.DataFrame(coincidencias)
+            
+            # Generar nombre de archivo con fecha y hora
+            fecha_hora = datetime.now().strftime("%Y%m%d_%H%M%S")
+            nombre_archivo = f"coincidencias_proyecto_{id_proyecto}_{fecha_hora}.xlsx"
+            
+            # Abrir diálogo para seleccionar ubicación del archivo
+            ruta_archivo, _ = QFileDialog.getSaveFileName(
+                self,
+                "Guardar archivo Excel",
+                nombre_archivo,
+                "Excel Files (*.xlsx)"
+            )
+            
+            if ruta_archivo:
+                # Asegurarse de que el archivo termine en .xlsx
+                if not ruta_archivo.endswith('.xlsx'):
+                    ruta_archivo += '.xlsx'
+                
+                # Guardar archivo
+                df.to_excel(ruta_archivo, index=False)
+                QMessageBox.information(
+                    self,
+                    "Éxito",
+                    f"Archivo guardado exitosamente en:\n{ruta_archivo}"
+                )
+                
+        except Exception as e:
+            QMessageBox.critical(
+                self,
+                "Error",
+                f"Error al exportar a Excel: {str(e)}"
+            )
