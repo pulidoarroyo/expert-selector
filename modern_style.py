@@ -1,4 +1,4 @@
-from PyQt5.QtGui import QFont, QPalette, QColor, QIcon
+from PyQt5.QtGui import QFont
 
 class ModernStyle:
     # Color scheme

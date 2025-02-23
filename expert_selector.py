@@ -1,11 +1,11 @@
 from PyQt5.QtWidgets import (
-    QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, 
+    QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, 
     QLabel, QLineEdit, QComboBox, QPushButton, QStackedWidget, 
     QTableWidget, QTableWidgetItem, QFormLayout, QCheckBox, QDialog, 
     QMessageBox, QTextEdit, QScrollArea, QFrame, QTabWidget, QGridLayout, QHeaderView
 )
-from PyQt5.QtCore import Qt, QSize
-from PyQt5.QtGui import QFont, QPalette, QColor, QIcon
+from PyQt5.QtCore import Qt
+from PyQt5.QtGui import QIcon
 from database_manager import DatabaseManager
 from matching_algorithm import MatchingAlgorithm
 from modern_style import ModernStyle
