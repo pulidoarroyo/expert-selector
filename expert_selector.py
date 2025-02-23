@@ -804,124 +804,313 @@ class ExpertSelector(QMainWindow):
             QMessageBox.critical(self, "Error", f"No se pudo guardar el proyecto: {str(e)}")
 
     def actualizar_candidato(self, candidato):
-    # Diálogo para actualizar candidato
         dialog = QDialog(self)
         dialog.setWindowTitle("Actualizar Candidato")
-        dialog.setGeometry(250, 250, 500, 600)
+        dialog.setGeometry(250, 250, 800, 600)
+        dialog.setStyleSheet("""
+        QDialog {
+            background-color: #f5f5f5;
+        }
+        QTabWidget::pane {
+            border: 1px solid #ddd;
+            background: white;
+            border-radius: 5px;
+        }
+        QTabBar::tab {
+            background: #e0e0e0;
+            padding: 8px 20px;
+            margin: 2px;
+            border-radius: 4px;
+        }
+        QTabBar::tab:selected {
+            background: #2196F3;
+            color: white;
+        }
+        QLineEdit, QComboBox {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background: white;
+        }
+        QPushButton {
+            background-color: #2196F3;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+        }
+        QPushButton:hover {
+            background-color: #1976D2;
+        }
+        QCheckBox {
+            padding: 5px;
+        }
+        QLabel {
+            font-weight: bold;
+        }
+    """)
 
-        layout = QFormLayout()
+        main_layout = QVBoxLayout(dialog)
+        tab_widget = QTabWidget()
 
-    # Campos del formulario pre-poblados
+    # Tab 1: Información Personal
+        personal_tab = QWidget()
+        personal_layout = QFormLayout(personal_tab)
+    
         nombre = QLineEdit(candidato['nombre'])
+        nombre.setPlaceholderText("Ingrese nombre")
         apellido = QLineEdit(candidato['apellido'])
-
-    # Idiomas (múltiple selección)
-        idiomas = QWidget()
-        idiomas_layout = QVBoxLayout()
-        idiomas_checks = []
-        candidato_idiomas = candidato['idiomas'] if isinstance(candidato['idiomas'], list) else eval(candidato['idiomas'])
-        for idioma in self.db_manager.obtener_idiomas():
-            check = QCheckBox(idioma)
-            check.setChecked(idioma in candidato_idiomas)
-            idiomas_layout.addWidget(check)
-            idiomas_checks.append(check)
-        idiomas.setLayout(idiomas_layout)
-
-    # Habilidades (múltiple selección)
-        habilidades = QWidget()
-        habilidades_layout = QVBoxLayout()
-        habilidades_checks = []
-        candidato_habilidades = candidato['habilidades'] if isinstance(candidato['habilidades'], list) else eval(candidato['habilidades'])
-        for habilidad in self.db_manager.obtener_habilidades():
-            check = QCheckBox(habilidad)
-            check.setChecked(habilidad in candidato_habilidades)
-            habilidades_layout.addWidget(check)
-            habilidades_checks.append(check)
-        habilidades.setLayout(habilidades_layout)
-
-    # Preferencia salarial
-        salario = QComboBox()
-        salario.addItems(self.db_manager.obtener_salarios())
-        salario.setCurrentText(str(candidato['preferencia_salarial']))
-
-    # Ubicación
+        apellido.setPlaceholderText("Ingrese apellido")
+    
         ubicacion = QComboBox()
         ubicacion.addItems(self.db_manager.obtener_paises())
         ubicacion.setCurrentText(candidato['ubicacion'])
+    
+        salario = QComboBox()
+        salario.addItems(self.db_manager.obtener_salarios())
+        salario.setCurrentText(str(candidato['preferencia_salarial']))
+    
+        personal_layout.addRow("Nombre:", nombre)
+        personal_layout.addRow("Apellido:", apellido)
+        personal_layout.addRow("Ubicación:", ubicacion)
+        personal_layout.addRow("Preferencia Salarial:", salario)
+  
+    # Tab 2: Idiomas
+        idiomas_tab = QWidget()
+        idiomas_layout = QVBoxLayout(idiomas_tab)
+    
+        search_idiomas = QLineEdit()
+        search_idiomas.setPlaceholderText("Buscar idiomas...")
+        idiomas_layout.addWidget(search_idiomas)
+    
+        idiomas_scroll = QScrollArea()
+        idiomas_scroll.setWidgetResizable(True)
+        idiomas_content = QWidget()
+        idiomas_grid = QGridLayout(idiomas_content)
+    
+        idiomas_checks = []
+        idiomas_list = self.db_manager.obtener_idiomas()
+        candidato_idiomas = candidato['idiomas'] if isinstance(candidato['idiomas'], list) else eval(candidato['idiomas'])
+    
+        for i, idioma in enumerate(idiomas_list):
+            check = QCheckBox(idioma)
+            check.setChecked(idioma in candidato_idiomas)
+            idiomas_checks.append(check)
+            idiomas_grid.addWidget(check, i // 3, i % 3)  # 3 columnas
+    
+        idiomas_scroll.setWidget(idiomas_content)
+        idiomas_layout.addWidget(idiomas_scroll)
+
+    # Tab 3: Habilidades
+        habilidades_tab = QWidget()
+        habilidades_layout = QVBoxLayout(habilidades_tab)
+    
+        search_habilidades = QLineEdit()
+        search_habilidades.setPlaceholderText("Buscar habilidades...")
+        habilidades_layout.addWidget(search_habilidades)
+      
+        habilidades_scroll = QScrollArea()
+        habilidades_scroll.setWidgetResizable(True)
+        habilidades_content = QWidget()
+        habilidades_grid = QGridLayout(habilidades_content)
+    
+        habilidades_checks = []
+        habilidades_list = self.db_manager.obtener_habilidades()
+        candidato_habilidades = candidato['habilidades'] if isinstance(candidato['habilidades'], list) else eval(candidato['habilidades'])
+    
+        for i, habilidad in enumerate(habilidades_list):
+            check = QCheckBox(habilidad)
+            check.setChecked(habilidad in candidato_habilidades)
+            habilidades_checks.append(check)
+            habilidades_grid.addWidget(check, i // 3, i % 3)  # 3 columnas
+    
+        habilidades_scroll.setWidget(habilidades_content)
+        habilidades_layout.addWidget(habilidades_scroll)
+
+    # Añadir tabs
+        tab_widget.addTab(personal_tab, "Información Personal")
+        tab_widget.addTab(idiomas_tab, "Idiomas")
+        tab_widget.addTab(habilidades_tab, "Habilidades")
+    
+        main_layout.addWidget(tab_widget)
 
     # Botón actualizar
+        btn_container = QWidget()
+        btn_layout = QHBoxLayout(btn_container)
+        btn_layout.addStretch()
+    
         btn_actualizar = QPushButton("Actualizar Candidato")
+        btn_actualizar.setFixedWidth(200)
         btn_actualizar.clicked.connect(lambda: self.guardar_actualizacion_candidato(
             candidato['id'],
-            nombre.text(), 
-            apellido.text(), 
+            nombre.text(),
+            apellido.text(),
             [check.text() for check in idiomas_checks if check.isChecked()],
             [check.text() for check in habilidades_checks if check.isChecked()],
-            salario.currentText(), 
+            salario.currentText(),
             ubicacion.currentText(),
             dialog
         ))
+    
+        btn_layout.addWidget(btn_actualizar)
+        main_layout.addWidget(btn_container)
 
-    # Agregar al layout
-        layout.addRow("Nombre:", nombre)
-        layout.addRow("Apellido:", apellido)
-        layout.addRow("Idiomas:", idiomas)
-        layout.addRow("Habilidades:", habilidades)
-        layout.addRow("Preferencia Salarial:", salario)
-        layout.addRow("Ubicación:", ubicacion)
-        layout.addRow(btn_actualizar)
+    # Implementar búsqueda en tiempo real para idiomas
+        def filtrar_idiomas(text):
+            for check in idiomas_checks:
+                check.setVisible(text.lower() in check.text().lower())
+    
+        search_idiomas.textChanged.connect(filtrar_idiomas)
 
-        dialog.setLayout(layout)
+    # Implementar búsqueda en tiempo real para habilidades
+        def filtrar_habilidades(text):
+            for check in habilidades_checks:
+                check.setVisible(text.lower() in check.text().lower())
+    
+        search_habilidades.textChanged.connect(filtrar_habilidades)
+
         dialog.exec_()
 
     def actualizar_proyecto(self, proyecto):
-        """Diálogo para actualizar los datos del proyecto"""
         dialog = QDialog(self)
         dialog.setWindowTitle("Actualizar Proyecto")
-        dialog.setGeometry(250, 250, 600, 700)
+        dialog.setGeometry(250, 250, 800, 600)
+        dialog.setStyleSheet("""
+        QDialog {
+            background-color: #f5f5f5;
+        }
+        QTabWidget::pane {
+            border: 1px solid #ddd;
+            background: white;
+            border-radius: 5px;
+        }
+        QTabBar::tab {
+            background: #e0e0e0;
+            padding: 8px 20px;
+            margin: 2px;
+            border-radius: 4px;
+        }
+        QTabBar::tab:selected {
+            background: #2196F3;
+            color: white;
+        }
+        QLineEdit, QComboBox, QTextEdit {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background: white;
+        }
+        QPushButton {
+            background-color: #2196F3;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+        }
+        QPushButton:hover {
+            background-color: #1976D2;
+        }
+        QCheckBox {
+            padding: 5px;
+        }
+        QLabel {
+            font-weight: bold;
+        }
+    """)
 
-        layout = QFormLayout()
+        main_layout = QVBoxLayout(dialog)
+        tab_widget = QTabWidget()
 
-    # Campos del formulario pre-poblados
+        # Tab 1: Información General
+        info_tab = QWidget()
+        info_layout = QFormLayout(info_tab)
+        
         nombre_empresa = QLineEdit(proyecto['nombre_empresa'])
+        nombre_empresa.setPlaceholderText("Ingrese nombre de la empresa")
+        
         nombre_proyecto = QLineEdit(proyecto['nombre_proyecto'])
+        nombre_proyecto.setPlaceholderText("Ingrese nombre del proyecto")
+        
         descripcion = QTextEdit()
         descripcion.setText(proyecto['descripcion'])
-
-    # Ubicación
+        descripcion.setMinimumHeight(100)
+        
         ubicacion = QComboBox()
         ubicacion.addItems(self.db_manager.obtener_paises())
         ubicacion.setCurrentText(proyecto['ubicacion'])
-
-    # Idiomas requeridos
-        idiomas = QWidget()
-        idiomas_layout = QVBoxLayout()
-        idiomas_checks = []
-        for idioma in self.db_manager.obtener_idiomas():
-            check = QCheckBox(idioma)
-            check.setChecked(idioma in proyecto['idiomas_requeridos'])
-            idiomas_layout.addWidget(check)
-            idiomas_checks.append(check)
-        idiomas.setLayout(idiomas_layout)
-
-    # Habilidades requeridas
-        habilidades = QWidget()
-        habilidades_layout = QVBoxLayout()
-        habilidades_checks = []
-        for habilidad in self.db_manager.obtener_habilidades():
-            check = QCheckBox(habilidad)
-            check.setChecked(habilidad in proyecto['habilidades_requeridas'])
-            habilidades_layout.addWidget(check)
-            habilidades_checks.append(check)
-        habilidades.setLayout(habilidades_layout)
-
-    # Salario mínimo
+        
         salario_minimo = QComboBox()
         salario_minimo.addItems(self.db_manager.obtener_salarios())
         salario_minimo.setCurrentText(proyecto['salario_minimo'])
+        
+        info_layout.addRow("Nombre de la Empresa:", nombre_empresa)
+        info_layout.addRow("Nombre del Proyecto:", nombre_proyecto)
+        info_layout.addRow("Descripción:", descripcion)
+        info_layout.addRow("Ubicación:", ubicacion)
+        info_layout.addRow("Salario Mínimo:", salario_minimo)
 
-    # Botón actualizar
+        # Tab 2: Idiomas Requeridos
+        idiomas_tab = QWidget()
+        idiomas_layout = QVBoxLayout(idiomas_tab)
+        
+        search_idiomas = QLineEdit()
+        search_idiomas.setPlaceholderText("Buscar idiomas...")
+        idiomas_layout.addWidget(search_idiomas)
+        
+        idiomas_scroll = QScrollArea()
+        idiomas_scroll.setWidgetResizable(True)
+        idiomas_content = QWidget()
+        idiomas_grid = QGridLayout(idiomas_content)
+        
+        idiomas_checks = []
+        idiomas_list = self.db_manager.obtener_idiomas()
+        for i, idioma in enumerate(idiomas_list):
+            check = QCheckBox(idioma)
+            check.setChecked(idioma in proyecto['idiomas_requeridos'])
+            idiomas_checks.append(check)
+            idiomas_grid.addWidget(check, i // 3, i % 3)  # 3 columnas
+        
+        idiomas_scroll.setWidget(idiomas_content)
+        idiomas_layout.addWidget(idiomas_scroll)
+
+        # Tab 3: Habilidades Requeridas
+        habilidades_tab = QWidget()
+        habilidades_layout = QVBoxLayout(habilidades_tab)
+        
+        search_habilidades = QLineEdit()
+        search_habilidades.setPlaceholderText("Buscar habilidades...")
+        habilidades_layout.addWidget(search_habilidades)
+        
+        habilidades_scroll = QScrollArea()
+        habilidades_scroll.setWidgetResizable(True)
+        habilidades_content = QWidget()
+        habilidades_grid = QGridLayout(habilidades_content)
+        
+        habilidades_checks = []
+        habilidades_list = self.db_manager.obtener_habilidades()
+        for i, habilidad in enumerate(habilidades_list):
+            check = QCheckBox(habilidad)
+            check.setChecked(habilidad in proyecto['habilidades_requeridas'])
+            habilidades_checks.append(check)
+            habilidades_grid.addWidget(check, i // 3, i % 3)  # 3 columnas
+        
+        habilidades_scroll.setWidget(habilidades_content)
+        habilidades_layout.addWidget(habilidades_scroll)
+
+        # Añadir tabs
+        tab_widget.addTab(info_tab, "Información General")
+        tab_widget.addTab(idiomas_tab, "Idiomas Requeridos")
+        tab_widget.addTab(habilidades_tab, "Habilidades Requeridas")
+        
+        main_layout.addWidget(tab_widget)
+
+        # Botón actualizar
+        btn_container = QWidget()
+        btn_layout = QHBoxLayout(btn_container)
+        btn_layout.addStretch()
+        
         btn_actualizar = QPushButton("Actualizar Proyecto")
+        btn_actualizar.setFixedWidth(200)
         btn_actualizar.clicked.connect(lambda: self.guardar_actualizacion_proyecto(
             proyecto['id'],
             nombre_empresa.text(),
@@ -933,18 +1122,24 @@ class ExpertSelector(QMainWindow):
             salario_minimo.currentText(),
             dialog
         ))
-    
-    # Agregar al layout
-        layout.addRow("Nombre de la Empresa:", nombre_empresa)
-        layout.addRow("Nombre del Proyecto:", nombre_proyecto)
-        layout.addRow("Descripción:", descripcion)
-        layout.addRow("Ubicación:", ubicacion)
-        layout.addRow("Idiomas Requeridos:", idiomas)
-        layout.addRow("Habilidades Requeridas:", habilidades)
-        layout.addRow("Salario Mínimo:", salario_minimo)
-        layout.addRow(btn_actualizar)
+        
+        btn_layout.addWidget(btn_actualizar)
+        main_layout.addWidget(btn_container)
 
-        dialog.setLayout(layout)
+        # Implementar búsqueda en tiempo real para idiomas
+        def filtrar_idiomas(text):
+            for check in idiomas_checks:
+                check.setVisible(text.lower() in check.text().lower())
+        
+        search_idiomas.textChanged.connect(filtrar_idiomas)
+
+        # Implementar búsqueda en tiempo real para habilidades
+        def filtrar_habilidades(text):
+            for check in habilidades_checks:
+                check.setVisible(text.lower() in check.text().lower())
+        
+        search_habilidades.textChanged.connect(filtrar_habilidades)
+
         dialog.exec_()
 
     def guardar_actualizacion_candidato(self, id_candidato, nombre, apellido, idiomas, habilidades, salario, ubicacion, dialog):
