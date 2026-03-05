@@ -2,10 +2,11 @@ from PyQt5.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, 
     QLabel, QLineEdit, QComboBox, QPushButton, QStackedWidget, 
     QTableWidget, QTableWidgetItem, QFormLayout, QCheckBox, QDialog, 
-    QMessageBox, QTextEdit, QScrollArea, QFrame, QTabWidget, QGridLayout, QHeaderView, QFileDialog
+    QMessageBox, QTextEdit, QScrollArea, QFrame, QTabWidget, QGridLayout, QHeaderView, QFileDialog, QApplication
 )
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QIcon
+from config import GEMINI_API_KEY
 from database_manager import DatabaseManager
 from matching_algorithm import MatchingAlgorithm
 from modern_style import ModernStyle
@@ -16,8 +17,9 @@ class ExpertSelector(QMainWindow):
     def __init__(self):
         super().__init__()
         self.db_manager = DatabaseManager()
-        self.matching_algorithm = MatchingAlgorithm()
-        
+        self.matching_algorithm = MatchingAlgorithm(gemini_api_key=GEMINI_API_KEY)
+
+        self._justificaciones_temp = {}
         self.setWindowIcon(QIcon('icon.png'))
         
         self.initUI()
@@ -1389,18 +1391,15 @@ class ExpertSelector(QMainWindow):
         coincidencias_layout = QVBoxLayout()
         coincidencias_layout.setSpacing(20)
 
-        # Título de la sección
         titulo = QLabel("Gestión de Coincidencias")
         titulo.setFont(ModernStyle.HEADER_FONT)
         titulo.setStyleSheet(f"color: {ModernStyle.TEXT_COLOR};")
         coincidencias_layout.addWidget(titulo)
 
-        # Contenedor de botones
         buttons_container = QWidget()
         buttons_layout = QHBoxLayout()
         buttons_layout.setSpacing(10)
 
-        # Botones de acción
         botones = [
             ("Generar Coincidencias", self.generar_coincidencias),
             ("Listar Coincidencias", self.listar_coincidencias)
@@ -1432,14 +1431,14 @@ class ExpertSelector(QMainWindow):
 
         layout = QVBoxLayout()
 
-        # Campo para ID del proyecto
         id_label = QLabel("ID del Proyecto:")
         id_input = QLineEdit()
         id_input.setPlaceholderText("Ingrese ID del proyecto")
 
-        # Botón para generar
         btn_generar = QPushButton("Generar Coincidencias")
-        btn_generar.clicked.connect(lambda: self.ejecutar_generacion_coincidencias(id_input.text(), dialog))
+        btn_generar.clicked.connect(
+            lambda: self.ejecutar_generacion_coincidencias(id_input.text(), dialog)
+        )
 
         layout.addWidget(id_label)
         layout.addWidget(id_input)
@@ -1456,42 +1455,53 @@ class ExpertSelector(QMainWindow):
                 return
 
             proyecto_id = int(id_proyecto)
-        
-            # Obtener proyecto
+
             proyecto = self.db_manager.obtener_proyecto_por_id(proyecto_id)
-    
             if not proyecto:
                 QMessageBox.warning(self, "Error", "No se encontró el proyecto especificado")
                 return
 
-            # Asegurarnos que el proyecto tenga su ID
             proyecto['id'] = proyecto_id
- 
-            # Obtener todos los candidatos
+
             candidatos = self.db_manager.listar_candidatos()
-     
             if not candidatos:
                 QMessageBox.warning(self, "Error", "No hay candidatos registrados en el sistema")
                 return
 
-            # Generar coincidencias usando el algoritmo de matching
-            coincidencias = self.matching_algorithm.generar_coincidencias(proyecto, candidatos)
-    
-            # Asegurarnos que cada coincidencia tenga el proyecto_id
+            # Mostrar indicador de carga mientras la IA genera las justificaciones
+            dialog.setEnabled(False)
+            QApplication.setOverrideCursor(Qt.WaitCursor)
+
+            try:
+                coincidencias = self.matching_algorithm.generar_coincidencias(proyecto, candidatos)
+            finally:
+                QApplication.restoreOverrideCursor()
+                dialog.setEnabled(True)
+
             for coincidencia in coincidencias:
                 coincidencia['proyecto_id'] = proyecto_id
-     
-            # Guardar coincidencias en la base de datos
+
+            # Guardar justificaciones en memoria (no en DB)
+            if not hasattr(self, '_justificaciones_temp'):
+                self._justificaciones_temp = {}
+
+            self._justificaciones_temp[proyecto_id] = {
+                c['id_candidato']: c.get('justificacion_ia', '')
+                for c in coincidencias
+            }
+
+            # Guardar el resto en DB (sin justificacion_ia)
             self.db_manager.guardar_coincidencias(proyecto_id, coincidencias)
-    
+
             QMessageBox.information(
-                self, 
-                "Éxito", 
+                self,
+                "Éxito",
                 f"Se generaron {len(coincidencias)} coincidencias para el proyecto"
             )
             dialog.accept()
 
         except Exception as e:
+            QApplication.restoreOverrideCursor()
             QMessageBox.critical(self, "Error", f"Error al generar coincidencias: {str(e)}")
 
     def listar_coincidencias(self):
@@ -1502,14 +1512,14 @@ class ExpertSelector(QMainWindow):
 
         layout = QVBoxLayout()
 
-        # Campo para ID del proyecto
         id_label = QLabel("ID del Proyecto:")
         id_input = QLineEdit()
         id_input.setPlaceholderText("Ingrese ID del proyecto")
 
-        # Botón para buscar
         btn_buscar = QPushButton("Buscar Coincidencias")
-        btn_buscar.clicked.connect(lambda: self.mostrar_lista_coincidencias(id_input.text(), dialog))
+        btn_buscar.clicked.connect(
+            lambda: self.mostrar_lista_coincidencias(id_input.text(), dialog)
+        )
 
         layout.addWidget(id_label)
         layout.addWidget(id_input)
@@ -1519,63 +1529,119 @@ class ExpertSelector(QMainWindow):
         dialog.exec_()
 
     def mostrar_lista_coincidencias(self, id_proyecto, dialog_previo):
-        """Muestra la lista de coincidencias para un proyecto específico y las exporta a Excel"""
+        """Muestra la lista de coincidencias con justificación IA al hacer click en una fila"""
         try:
             if not id_proyecto.isdigit():
                 QMessageBox.warning(self, "Error", "Por favor ingrese un ID válido")
                 return
 
-            # Obtener coincidencias
-            coincidencias = self.db_manager.obtener_coincidencias(int(id_proyecto))
-            
+            proyecto_id = int(id_proyecto)
+            coincidencias = self.db_manager.obtener_coincidencias(proyecto_id)
+
             if not coincidencias:
                 QMessageBox.information(self, "Info", "No se encontraron coincidencias para este proyecto")
                 return
 
-            # Crear nuevo diálogo para mostrar coincidencias
+            # Recuperar justificaciones en memoria si existen
+            justificaciones = {}
+            if hasattr(self, '_justificaciones_temp'):
+                justificaciones = self._justificaciones_temp.get(proyecto_id, {})
+
             lista_dialog = QDialog(self)
             lista_dialog.setWindowTitle(f"Coincidencias del Proyecto {id_proyecto}")
-            lista_dialog.setGeometry(200, 200, 900, 500)
+            lista_dialog.setGeometry(150, 150, 1000, 580)
 
-            layout = QVBoxLayout()
-            
-            # Crear tabla
+            main_layout = QVBoxLayout()
+
+            # ── Tabla de coincidencias ──────────────────────────────────────
             tabla = QTableWidget()
             tabla.setColumnCount(7)
             tabla.setHorizontalHeaderLabels([
-                "ID Candidato", "Nombre", "Apellido", 
-                "Porcentaje Match", "Idiomas", "Habilidades", 
-                "Ubicación"
+                "ID Candidato", "Nombre", "Apellido",
+                "Porcentaje Match", "Idiomas", "Habilidades", "Ubicación"
             ])
-
-            # Poblar tabla
+            tabla.setSelectionBehavior(QTableWidget.SelectRows)
+            tabla.setEditTriggers(QTableWidget.NoEditTriggers)
             tabla.setRowCount(len(coincidencias))
-            for fila, coincidencia in enumerate(coincidencias):
-                tabla.setItem(fila, 0, QTableWidgetItem(str(coincidencia['id_candidato'])))
-                tabla.setItem(fila, 1, QTableWidgetItem(coincidencia['nombre']))
-                tabla.setItem(fila, 2, QTableWidgetItem(coincidencia['apellido']))
-                tabla.setItem(fila, 3, QTableWidgetItem(f"{coincidencia['porcentaje_match']}%"))
-                tabla.setItem(fila, 4, QTableWidgetItem(str(coincidencia['idiomas'])))
-                tabla.setItem(fila, 5, QTableWidgetItem(str(coincidencia['habilidades'])))
-                tabla.setItem(fila, 6, QTableWidgetItem(coincidencia['ubicacion']))
+
+            for fila, c in enumerate(coincidencias):
+                tabla.setItem(fila, 0, QTableWidgetItem(str(c['id_candidato'])))
+                tabla.setItem(fila, 1, QTableWidgetItem(c['nombre']))
+                tabla.setItem(fila, 2, QTableWidgetItem(c['apellido']))
+                tabla.setItem(fila, 3, QTableWidgetItem(f"{c['porcentaje_match']}%"))
+                tabla.setItem(fila, 4, QTableWidgetItem(str(c['idiomas'])))
+                tabla.setItem(fila, 5, QTableWidgetItem(str(c['habilidades'])))
+                tabla.setItem(fila, 6, QTableWidgetItem(c['ubicacion']))
 
             tabla.resizeColumnsToContents()
             tabla.setSortingEnabled(True)
 
-            # Crear botón para exportar a Excel
+            # ── Panel de justificación IA ───────────────────────────────────
+            ia_panel = QWidget()
+            ia_layout = QVBoxLayout()
+            ia_layout.setContentsMargins(0, 0, 0, 0)
+
+            ia_titulo = QLabel("💡 Análisis IA del candidato seleccionado")
+            ia_titulo.setFont(ModernStyle.NORMAL_FONT)
+            ia_titulo.setStyleSheet("font-weight: bold; color: #5c6bc0;")
+
+            ia_texto = QLabel("Selecciona una fila para ver el análisis generado por IA.")
+            ia_texto.setWordWrap(True)
+            ia_texto.setStyleSheet(
+                "background: #f5f5f5; border: 1px solid #ddd; "
+                "border-radius: 6px; padding: 10px; color: #333;"
+            )
+            ia_texto.setMinimumHeight(80)
+            ia_texto.setAlignment(Qt.AlignTop)
+
+            ia_layout.addWidget(ia_titulo)
+            ia_layout.addWidget(ia_texto)
+            ia_panel.setLayout(ia_layout)
+
+            # Al seleccionar una fila, actualizar el panel de justificación
+            def on_fila_seleccionada():
+                filas = tabla.selectedItems()
+                if not filas:
+                    return
+                fila_idx = tabla.currentRow()
+                id_candidato = int(tabla.item(fila_idx, 0).text())
+                justificacion = justificaciones.get(id_candidato, "")
+
+                if justificacion:
+                    ia_texto.setText(justificacion)
+                    ia_texto.setStyleSheet(
+                        "background: #eef2ff; border: 1px solid #9fa8da; "
+                        "border-radius: 6px; padding: 10px; color: #1a237e;"
+                    )
+                else:
+                    ia_texto.setText(
+                        "No hay análisis IA disponible para este candidato.\n"
+                        "Regenera las coincidencias para obtenerlo."
+                    )
+                    ia_texto.setStyleSheet(
+                        "background: #f5f5f5; border: 1px solid #ddd; "
+                        "border-radius: 6px; padding: 10px; color: #999;"
+                    )
+
+            tabla.itemSelectionChanged.connect(on_fila_seleccionada)
+
+            # ── Botón exportar ──────────────────────────────────────────────
             btn_exportar = QPushButton("Exportar a Excel")
-            btn_exportar.clicked.connect(lambda: self.exportar_a_excel(coincidencias, id_proyecto))
-            
-            layout.addWidget(tabla)
-            layout.addWidget(btn_exportar)
-            lista_dialog.setLayout(layout)
-            
+            btn_exportar.clicked.connect(
+                lambda: self.exportar_a_excel(coincidencias, id_proyecto)
+            )
+
+            main_layout.addWidget(tabla)
+            main_layout.addWidget(ia_panel)
+            main_layout.addWidget(btn_exportar)
+            lista_dialog.setLayout(main_layout)
+
             dialog_previo.accept()
             lista_dialog.exec_()
 
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Error al listar coincidencias: {str(e)}")
-
+            
     def exportar_a_excel(self, coincidencias, id_proyecto):
         """Exporta las coincidencias a un archivo Excel"""
         try:
