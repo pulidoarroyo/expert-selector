@@ -3,4 +3,6 @@ El sistema para el proceso de selección de personal de desarrollo de software (
 Permite registrar información detallada de los candidatos afiliados a la hipotética agencia, incluyendo sus habilidades como programador, idiomas que maneja, ubicación y preferencias salariales. Por otro lado, gestiona solicitudes de empresas que necesitan cubrir posiciones en proyectos específicos, almacenando las características y requerimientos de las vacantes.
 Mediante un algoritmo inteligente, el sistema evalúa y clasifica a los candidatos, considerando su idoneidad para los proyectos según las necesidades de las empresas y los criterios económicos de ambas partes. Además, genera informes con las coincidencias más relevantes, permitiendo a la compañía intermediaria facilitar un proceso de selección eficiente y alineado con los objetivos de todas las partes involucradas.
 
+https://www.youtube.com/watch?v=XNndxhJmHK8
+
 ![ExpertSelector](https://github.com/user-attachments/assets/77cb9648-9101-439b-b683-282f26ff1807)
