@@ -9,8 +9,12 @@ def test_matching():
     
     try:
         # 1. Verificar y mostrar proyecto de prueba
-        proyecto_id = 1  # Usaremos el proyecto con ID 1 para la prueba
+        proyecto_id = 190829  # Usaremos el proyecto con ID 1 para la prueba
         proyecto = db.obtener_proyecto_por_id(proyecto_id)
+
+        if not proyecto:
+            print(f"No se encontró el proyecto con ID {proyecto_id}. Asegúrate de que exista en la base de datos.")
+            return False
         
         print("\n=== Proyecto de prueba ===")
         print(f"ID: {proyecto['id']}")
@@ -59,7 +63,7 @@ def test_matching():
         return True
         
     except Exception as e:
-        print(f"Error durante la prueba: {str(e)}")
+        print("Error durante la prueba:", e)
         return False
 
 if __name__ == "__main__":

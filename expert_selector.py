@@ -6,7 +6,7 @@ from PyQt5.QtWidgets import (
 )
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QIcon
-from config import GEMINI_API_KEY
+from chat_section import ChatSection
 from database_manager import DatabaseManager
 from matching_algorithm import MatchingAlgorithm
 from modern_style import ModernStyle
@@ -17,7 +17,7 @@ class ExpertSelector(QMainWindow):
     def __init__(self):
         super().__init__()
         self.db_manager = DatabaseManager()
-        self.matching_algorithm = MatchingAlgorithm(gemini_api_key=GEMINI_API_KEY)
+        self.matching_algorithm = MatchingAlgorithm()
 
         self._justificaciones_temp = {}
         self.setWindowIcon(QIcon('icon.png'))
@@ -60,7 +60,8 @@ class ExpertSelector(QMainWindow):
         nav_buttons = [
             ("Candidatos", self.mostrar_candidatos),
             ("Proyectos", self.mostrar_proyectos),
-            ("Coincidencias", self.mostrar_coincidencias)
+            ("Coincidencias", self.mostrar_coincidencias),
+            ("Chat", self.mostrar_chat),
         ]
 
         for texto, funcion in nav_buttons:
@@ -109,6 +110,8 @@ class ExpertSelector(QMainWindow):
         self.crear_seccion_candidatos()
         self.crear_seccion_proyectos()
         self.crear_seccion_coincidencias()
+        self.chat_section = ChatSection(self.db_manager, self.matching_algorithm)
+        self.chat_section_index = self.stacked_widget.addWidget(self.chat_section)
 
         # Añadir widgets al layout principal
         main_layout.addWidget(nav_panel)
@@ -1422,6 +1425,10 @@ class ExpertSelector(QMainWindow):
     def mostrar_coincidencias(self):
         """Muestra la sección de coincidencias"""
         self.stacked_widget.setCurrentIndex(2)
+
+    def mostrar_chat(self):
+        """Muestra la sección de chat"""
+        self.stacked_widget.setCurrentIndex(self.chat_section_index)
 
     def generar_coincidencias(self):
         """Diálogo para generar coincidencias para un proyecto específico"""

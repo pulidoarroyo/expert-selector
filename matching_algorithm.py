@@ -1,9 +1,7 @@
-from urllib import response
-
-import google.generativeai as genai
+from ai import genai_client
 
 class MatchingAlgorithm:
-    def __init__(self, gemini_api_key: str = None):
+    def __init__(self):
         """Inicializar pesos para diferentes criterios de coincidencia"""
         self.weights = {
             'idiomas': 0.15,
@@ -11,14 +9,8 @@ class MatchingAlgorithm:
             'ubicacion': 0.10,
             'salario': 0.15
         }
-
-        if gemini_api_key:
-            genai.configure(api_key=gemini_api_key)
-            self.model = genai.GenerativeModel("gemini-2.5-flash")
-            self.ia_activa = True
-        else:
-            self.model = None
-            self.ia_activa = False
+        
+        self.model = "gemini-2.5-flash"
 
     def calcular_match_idiomas(self, idiomas_requeridos, idiomas_candidato):
         """Calcular porcentaje de coincidencia de idiomas"""
@@ -78,7 +70,7 @@ class MatchingAlgorithm:
         Genera un párrafo en lenguaje natural explicando por qué el candidato
         encaja o no con el proyecto. Solo se llama si la IA está activa.
         """
-        if not self.ia_activa:
+        if not genai_client:
             return ""
 
         prompt = f"""Eres un consultor de recursos humanos especializado en tecnología.
@@ -106,7 +98,10 @@ Puntuaciones:
 - Salario: {round(scores['salario'] * 100, 1)}%
 - Score total: {round(score_total * 100, 1)}%"""
 
-        response = self.model.generate_content(prompt)
+        response = genai_client.models.generate_content(
+            model=self.model,
+            contents=prompt
+        )
         
         return response.text.strip()
 
@@ -156,6 +151,7 @@ Puntuaciones:
 
         # Generar justificación solo para los top 5
         candidatos_dict = {c['id']: c for c in candidatos}
+        print("Top 5 coincidencias antes de IA:", coincidencias[:5])  # Debug: Ver top 5 antes de IA
         for coincidencia in coincidencias[:3]:
             candidato = candidatos_dict[coincidencia['id_candidato']]
             scores = coincidencia.pop('_scores')
